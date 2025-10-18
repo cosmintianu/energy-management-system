@@ -4,7 +4,7 @@ import org.example.user_management_microservice.dtos.UserDTO;
 import org.example.user_management_microservice.dtos.UserDetailsDTO;
 import org.example.user_management_microservice.dtos.builders.UserBuilder;
 import org.example.user_management_microservice.entities.User;
-import org.example.user_management_microservice.handler.exceptions.model.ResourceNotFoundException;
+import org.example.user_management_microservice.handlers.exceptions.model.ResourceNotFoundException;
 import org.example.user_management_microservice.repositories.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,4 +1,4 @@
-package org.example.user_management_microservice.handler.exceptions.model;
+package org.example.user_management_microservice.handlers.exceptions.model;
 
 import org.springframework.http.HttpStatus;
 

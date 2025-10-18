@@ -66,6 +66,7 @@ public class UserService {
         existingUser.setAddress(userDetailsDTO.getAddress());
 
         existingUser = userRepository.save(existingUser);
+        LOGGER.debug("User with id {} was updated in db", id);
         return UserBuilder.toUserDetailsDTO(existingUser);
     }
 
@@ -76,7 +77,8 @@ public class UserService {
             throw new ResourceNotFoundException(User.class.getSimpleName() + " with id: " + id);
         }
 
-        userRepository.delete(existingUser);
+        userRepository.delete(userOptional.get());
+        LOGGER.debug("User with id {} was deleted in db", id);
     }
 
 }

@@ -15,11 +15,14 @@ public class UserDetailsDTO {
     @NotBlank(message = "password is required")
     private String password;
 
-    @NotBlank(message = "role is required")
+//    @NotBlank(message = "role is required")
     private UserRole role;
 
     @NotBlank(message = "address is required")
     private String address;
+
+    public UserDetailsDTO() {
+    }
 
     public UserDetailsDTO(String username, String password, UserRole role, String address) {
         this.username = username;

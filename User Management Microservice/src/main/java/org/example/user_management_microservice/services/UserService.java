@@ -46,6 +46,11 @@ public class UserService {
     public List<UserDTO> findAllUsers() {
         List<User> users = userRepository.findAll();
 
+        if(users.isEmpty()) {
+            LOGGER.error("There are no users in the db.");
+            throw new ResourceNotFoundException("No users found in db.");
+        }
+
         return  users.stream()
                 .map(UserBuilder::toUserDTO)
                 .collect(Collectors.toList());

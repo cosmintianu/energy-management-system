@@ -86,7 +86,8 @@ public class UserDetailsDTO {
         UserDetailsDTO that = (UserDetailsDTO) o;
         return username.equals(that.username) &&
                 password.equals(that.password) &&
-                address.equals(that.address);
+                address.equals(that.address) &&
+                role.equals(that.role);
     }
 
     @Override

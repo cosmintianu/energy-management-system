@@ -23,13 +23,16 @@ public class Device {
     @Column(name = "max_consumption", nullable = false)
     private double max_consumption;
 
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
 
     public Device() {
     }
 
-    public Device(String name, double max_consumption) {
+    public Device(String name, double max_consumption, UUID userId) {
         this.name = name;
         this.max_consumption = max_consumption;
+        this.userId = userId;
     }
 
     public UUID getId() {
@@ -54,5 +57,13 @@ public class Device {
 
     public void setMax_consumption(double max_consumption) {
         this.max_consumption = max_consumption;
+    }
+
+    public UUID getUserId() {
+        return userId;
+    }
+
+    public void setUserId(UUID userId) {
+        this.userId = userId;
     }
 }

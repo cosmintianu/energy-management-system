@@ -28,27 +28,60 @@ public class DeviceService {
         this.deviceRepository = deviceRepository;
     }
 
-    public List<DeviceDTO> findDevices() {
-        List<Device> deviceList = deviceRepository.findAll();
-        return deviceList.stream()
-                .map(DeviceBuilder::toDeviceDTO)
-                .collect(Collectors.toList());
+    public UUID createDevice(DeviceDetailsDTO deviceDetailsDTO) {
+        Device device = DeviceBuilder.toEntity(deviceDetailsDTO);
+        device =  deviceRepository.save(device);
+        LOGGER.debug("Device with id {} was inserted in db", device.getId());
+        return device.getId();
     }
 
     public DeviceDetailsDTO findDeviceById(UUID id) {
-        Optional<Device> prosumerOptional = deviceRepository.findById(id);
-        if (!prosumerOptional.isPresent()) {
-            LOGGER.error("Device with id {} was not found in db", id);
+        Optional<Device> optionalDevice = deviceRepository.findById(id);
+        if (optionalDevice.isEmpty()) {
+            LOGGER.error("Device with id {} not found in db.", id);
             throw new ResourceNotFoundException(Device.class.getSimpleName() + " with id: " + id);
         }
-        return DeviceBuilder.toDeviceDetailsDTO(prosumerOptional.get());
+
+        return DeviceBuilder.toDeviceDetailsDTO(optionalDevice.get());
     }
 
-    public UUID insert(DeviceDetailsDTO deviceDetailsDTO) {
-        Device person = DeviceBuilder.toEntity(deviceDetailsDTO);
-        person = deviceRepository.save(person);
-        LOGGER.debug("Person with id {} was inserted in db", person.getId());
-        return person.getId();
+    public List<DeviceDTO> findAllDevices() {
+        List<Device> devices = deviceRepository.findAll();
+
+        if(devices.isEmpty()) {
+            LOGGER.error("There are no devices in the db.");
+            throw new ResourceNotFoundException("No devices found in db.");
+        }
+
+        return devices.stream().map(DeviceBuilder::toDeviceDTO).collect(Collectors.toList());
+    }
+
+    public DeviceDetailsDTO updateDevice(UUID id, DeviceDetailsDTO deviceDetailsDTO) {
+        Optional<Device> optionalDevice = deviceRepository.findById(id);
+        if (optionalDevice.isEmpty()) {
+            LOGGER.error("Device with id {} not found in db.", id);
+            throw new ResourceNotFoundException(Device.class.getSimpleName() + " with id: " + id);
+        }
+
+        Device existingDevice = optionalDevice.get();
+        existingDevice.setName(deviceDetailsDTO.getName());
+        existingDevice.setUserId(deviceDetailsDTO.getUserId());
+        existingDevice.setMax_consumption(deviceDetailsDTO.getMax_consumption());
+
+        existingDevice =  deviceRepository.save(existingDevice);
+        LOGGER.debug("Device with id {} was updated in db", id);
+        return DeviceBuilder.toDeviceDetailsDTO(existingDevice);
+    }
+
+    public void deleteDevice(UUID id) {
+        Optional<Device> optionalDevice = deviceRepository.findById(id);
+        if (optionalDevice.isEmpty()) {
+            LOGGER.error("Device with id {} not found in db.", id);
+            throw new ResourceNotFoundException(Device.class.getSimpleName() + " with id: " + id);
+        }
+
+        deviceRepository.delete(optionalDevice.get());
+        LOGGER.debug("Device with id {} was deleted in db", id);
     }
 
 }

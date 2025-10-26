@@ -10,19 +10,14 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface DeviceRepository extends JpaRepository<Device, UUID> {
-
-    /**
-     * Example: JPA generate query by existing field
-     */
     List<Device> findByName(String name);
 
     /**
-     * Example: Custom query
+     * Query to get all devices of a user
      */
-//    @Query(value = "SELECT p " +
-//            "FROM Device p " +
-//            "WHERE p.name = :name " +
-//            "AND p.age >= 60  ")
-//    Optional<Device> findSeniorsByName(@Param("name") String name);
+//    @Query(value = "SELECT d " +
+//            "FROM Device d " +
+//            "WHERE d.user_id = :id ")
+//    Optional<Device> findDevicesByUserId(@Param("user_id") UUID userId);
 
 }

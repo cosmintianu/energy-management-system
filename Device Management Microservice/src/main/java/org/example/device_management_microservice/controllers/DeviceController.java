@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/people")
+@RequestMapping("/devices")
 @Validated
 public class DeviceController {
 
@@ -24,24 +24,33 @@ public class DeviceController {
         this.deviceService = deviceService;
     }
 
-    @GetMapping
-    public ResponseEntity<List<DeviceDTO>> getDevices() {
-        return ResponseEntity.ok(deviceService.findDevices());
-    }
-
     @PostMapping
-    public ResponseEntity<Void> create(@Valid @RequestBody DeviceDetailsDTO deviceDetailsDTO) {
-        UUID id = deviceService.insert(deviceDetailsDTO);
-        URI location = ServletUriComponentsBuilder
-                .fromCurrentRequest()
-                .path("/{id}")
-                .buildAndExpand(id)
-                .toUri();
-        return ResponseEntity.created(location).build(); // 201 + Location header
+    public ResponseEntity<Void> createDevice(@Valid @RequestBody DeviceDetailsDTO deviceDetailsDTO) {
+        UUID id = deviceService.createDevice(deviceDetailsDTO);
+
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(id).toUri();
+
+        return ResponseEntity.created(location).build();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<DeviceDetailsDTO> getDevice(@PathVariable UUID id) {
+    public ResponseEntity<DeviceDetailsDTO> getDevice(@PathVariable UUID id){
         return ResponseEntity.ok(deviceService.findDeviceById(id));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<DeviceDTO>> getDevices() {
+        return ResponseEntity.ok(deviceService.findAllDevices());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<DeviceDetailsDTO> updateDevice(@PathVariable UUID id, @Valid @RequestBody DeviceDetailsDTO deviceDetailsDTO) {
+        return ResponseEntity.ok(deviceService.updateDevice(id, deviceDetailsDTO));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteDevice(@PathVariable UUID id) {
+        deviceService.deleteDevice(id);
+        return ResponseEntity.noContent().build();
     }
 }

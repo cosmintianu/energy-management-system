@@ -15,11 +15,11 @@ public class DeviceBuilder {
     }
 
     public static DeviceDetailsDTO toDeviceDetailsDTO(Device device) {
-        return new DeviceDetailsDTO(device.getId(), device.getName(), device.getMax_consumption());
+        return new DeviceDetailsDTO(device.getId(), device.getName(), device.getMax_consumption(), device.getUserId());
     }
 
     public static Device toEntity(DeviceDetailsDTO personDetailsDTO) {
         return new Device(personDetailsDTO.getName(),
-                personDetailsDTO.getMax_consumption());
+                personDetailsDTO.getMax_consumption(), personDetailsDTO.getUserId());
     }
 }

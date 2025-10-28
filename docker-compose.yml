@@ -1,0 +1,99 @@
+services:
+  # Traefik Reverse Proxy
+  traefik:
+    image: traefik:v3.1
+    command:
+      - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--experimental.plugins.jwtValidation.moduleName=github.com/legege/jwt-validation-middleware"
+      - "--experimental.plugins.jwtValidation.version=v0.2.1"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./plugins-storage:/plugins-storage
+    networks:
+      - microservices-network
+  # User Management Service
+  user-service:
+    build: ./User Management Microservice
+    container_name: user-service
+    environment:
+      - DB_IP=user-db
+      - DB_PORT=5432
+      - DB_DBNAME=user_management_microservice_db
+      - DB_USER=postgres
+      - DB_PASSWORD=cox
+    # ports:
+    #   - "8081:8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.user-service.rule=Host(`localhost`) && PathPrefix(`/users`)"
+      - "traefik.http.services.user-service.loadbalancer.server.port=8080"
+      - "traefik.http.routers.user-service.entrypoints=web"
+    networks:
+      - microservices-network
+    restart: on-failure
+
+  # User Database
+  user-db:
+    image: postgres:16
+    container_name: user-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: cox
+      POSTGRES_DB: user_management_microservice_db
+    # ports:
+    #   - "5433:5432"
+    volumes:
+      - user-db-data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+
+  # Device Management Service
+  device-service:
+    build: ./Device Management Microservice
+    container_name: device-service
+    environment:
+      - DB_IP=device-db
+      - DB_PORT=5432
+      - DB_DBNAME=device_management_microservice_db
+      - DB_USER=postgres
+      - DB_PASSWORD=cox
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.device-service.rule=Host(`localhost`) && PathPrefix(`/devices`)"
+      - "traefik.http.services.device-service.loadbalancer.server.port=8080"
+      - "traefik.http.routers.device-service.entrypoints=web"
+    # restart: on-failure
+    networks:
+      - microservices-network
+    # depends_on:
+    #   device-db:
+    #     condition: service_healthy
+
+  # Device Database
+  device-db:
+    image: postgres:16
+    container_name: device-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: cox
+      POSTGRES_DB: device_management_microservice_db
+    volumes:
+      - device-db-data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+
+volumes:
+  user-db-data:
+  device-db-data:
+
+networks:
+  microservices-network:

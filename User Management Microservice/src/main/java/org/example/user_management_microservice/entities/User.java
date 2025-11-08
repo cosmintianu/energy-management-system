@@ -1,7 +1,6 @@
 package org.example.user_management_microservice.entities;
 
 import jakarta.persistence.*;
-import org.example.user_management_microservice.entities.enums.UserRole;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
 import org.hibernate.type.SqlTypes;
@@ -18,26 +17,22 @@ public class User {
     @JdbcTypeCode(SqlTypes.UUID)
     private UUID id;
 
-    @Column(name = "username", nullable = false, unique = true, length = 50)
+    @Column(name = "username", nullable = false, unique = true, length = 100)
     private String username;
 
-    @Column(name = "password", nullable = false)
-    private String password; // TODO: store hashed password
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "role", nullable = false)
-    private UserRole role;
+    @Column(name = "email", nullable = false, unique = true)
+    private String email;
 
     @Column(name = "address", nullable = false)
     private String address;
 
+
     public User() {
     }
 
-    public User(String username, String password, UserRole role, String address) {
+    public User(String username, String email, String address) {
         this.username = username;
-        this.password = password;
-        this.role = role;
+        this.email = email;
         this.address = address;
     }
 
@@ -55,15 +50,13 @@ public class User {
 
     public void setUsername(String username) {this.username = username;}
 
-    public String getPassword() {
-        return password;
+    public String getEmail() {
+        return email;
     }
 
-    public void setPassword(String password) {this.password = password;}
-
-    public UserRole getRole() {return role;}
-
-    public void setRole(UserRole role) {this.role = role;}
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
     public String getAddress() {
         return address;

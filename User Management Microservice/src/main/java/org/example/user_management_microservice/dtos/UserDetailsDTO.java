@@ -1,7 +1,6 @@
 package org.example.user_management_microservice.dtos;
 
 import jakarta.validation.constraints.NotBlank;
-import org.example.user_management_microservice.entities.enums.UserRole;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -12,31 +11,26 @@ public class UserDetailsDTO {
     @NotBlank(message = "username is required")
     private String username;
 
-    @NotBlank(message = "password is required")
-    private String password;
-
-//    @NotBlank(message = "role is required")
-    private UserRole role;
-
     @NotBlank(message = "address is required")
     private String address;
+
+    @NotBlank(message = "email is required")
+    private String email;
 
     public UserDetailsDTO() {
     }
 
-    public UserDetailsDTO(String username, String password, UserRole role, String address) {
+    public UserDetailsDTO(String username, String address, String email) {
         this.username = username;
-        this.password = password;
-        this.role = role;
         this.address = address;
+        this.email = email;
     }
 
-    public UserDetailsDTO(UUID id, String username, String password, UserRole role, String address) {
+    public UserDetailsDTO(UUID id, String username, String address, String email) {
         this.id = id;
         this.username = username;
-        this.password = password;
-        this.role = role;
         this.address = address;
+        this.email = email;
     }
 
     public UUID getId() {
@@ -55,20 +49,12 @@ public class UserDetailsDTO {
         this.username = username;
     }
 
-    public String getPassword() {
-        return password;
+    public String getEmail() {
+        return email;
     }
 
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public UserRole getRole() {
-        return role;
-    }
-
-    public void setRole(UserRole role) {
-        this.role = role;
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public String getAddress() {
@@ -85,13 +71,12 @@ public class UserDetailsDTO {
         if (o == null || getClass() != o.getClass()) return false;
         UserDetailsDTO that = (UserDetailsDTO) o;
         return username.equals(that.username) &&
-                password.equals(that.password) &&
-                address.equals(that.address) &&
-                role.equals(that.role);
+                email.equals(that.email) &&
+                address.equals(that.address);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(username, address);
+        return Objects.hash(username, email, address);
     }
 }

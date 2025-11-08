@@ -25,6 +25,10 @@ public class JwtValidationService {
         return validateToken(token).getSubject();
     }
 
+    public String extractRole(String token){
+        return validateToken(token).get("role").toString();
+    }
+
     public boolean isTokenExpired(String token){
         return validateToken(token).getExpiration().before(new Date());
     }

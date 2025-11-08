@@ -1,26 +1,18 @@
 package org.example.user_management_microservice.dtos;
 
-import org.example.user_management_microservice.entities.User;
-import org.example.user_management_microservice.entities.enums.UserRole;
-
 import java.util.Objects;
 import java.util.UUID;
 
 public class UserDTO {
     private UUID id;
     private String username;
-    private String password;
-    private UserRole role;
-
 
     public UserDTO() {
     }
 
-    public UserDTO(UUID id, String username, String password, UserRole role) {
+    public UserDTO(UUID id, String username) {
         this.id = id;
         this.username = username;
-        this.password = password;
-        this.role = role;
     }
 
     public UUID getId() {
@@ -39,30 +31,13 @@ public class UserDTO {
         this.username = username;
     }
 
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public UserRole getRole() {
-        return role;
-    }
-
-    public void setRole(UserRole role) {
-        this.role = role;
-    }
 
     @Override public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         UserDTO that = (UserDTO) o;
-        return Objects.equals(username, that.username) &&
-                Objects.equals(password, that.password) &&
-                Objects.equals(role, that.role);
+        return Objects.equals(username, that.username);
     }
-    @Override public int hashCode() { return Objects.hash(username,password); }
+    @Override public int hashCode() { return Objects.hash(username); }
 }
 

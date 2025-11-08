@@ -66,8 +66,7 @@ public class UserService {
         User existingUser = userOptional.get();
 
         existingUser.setUsername(userDetailsDTO.getUsername());
-        existingUser.setPassword(userDetailsDTO.getPassword());
-        existingUser.setRole(userDetailsDTO.getRole());
+        existingUser.setEmail(userDetailsDTO.getEmail());
         existingUser.setAddress(userDetailsDTO.getAddress());
 
         existingUser = userRepository.save(existingUser);

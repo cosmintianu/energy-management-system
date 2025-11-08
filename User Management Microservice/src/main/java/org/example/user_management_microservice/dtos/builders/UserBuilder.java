@@ -8,14 +8,14 @@ public class UserBuilder {
     public UserBuilder() {
     }
     public static UserDTO toUserDTO(User user) {
-        return new UserDTO(user.getId(), user.getUsername(), user.getPassword(), user.getRole());
+        return new UserDTO(user.getId(), user.getUsername());
     }
 
     public static UserDetailsDTO toUserDetailsDTO(User user) {
-        return new UserDetailsDTO(user.getId(), user.getUsername(), user.getPassword(), user.getRole(), user.getAddress());
+        return new UserDetailsDTO(user.getId(), user.getUsername(), user.getEmail(), user.getAddress());
     }
 
     public static User toEntity(UserDetailsDTO userDetailsDTO) {
-        return new User(userDetailsDTO.getUsername(), userDetailsDTO.getPassword(), userDetailsDTO.getRole(), userDetailsDTO.getAddress());
+        return new User(userDetailsDTO.getUsername(), userDetailsDTO.getEmail(), userDetailsDTO.getAddress());
     }
 }

@@ -5,6 +5,7 @@ import org.example.user_management_microservice.dtos.UserDTO;
 import org.example.user_management_microservice.dtos.UserDetailsDTO;
 import org.example.user_management_microservice.services.UserService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -37,6 +38,7 @@ public class UserController {
     public ResponseEntity<UserDetailsDTO> getUser(@PathVariable UUID id) { return ResponseEntity.ok(userService.findUserById(id));}
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<UserDTO>> getUsers() { return ResponseEntity.ok(userService.findAllUsers());
     }
 

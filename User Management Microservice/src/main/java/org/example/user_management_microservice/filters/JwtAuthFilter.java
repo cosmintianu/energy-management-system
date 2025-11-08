@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.example.user_management_microservice.services.JwtValidationService;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -38,12 +40,20 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
             try {
                 String username = jwtValidationService.extractUsername(token);
+                String role = jwtValidationService.extractRole(token);
                 System.out.println("Extracted username: " + username); // Debug log
+                System.out.println("Extracted role: " + role);
 
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     if (!jwtValidationService.isTokenExpired(token)) {
+                        SimpleGrantedAuthority simpleGrantedAuthority = new SimpleGrantedAuthority("ROLE_" + role);
+
                         UsernamePasswordAuthenticationToken authToken =
-                                new UsernamePasswordAuthenticationToken(username, null, new ArrayList<>());
+                                new UsernamePasswordAuthenticationToken(
+                                        username,
+                                        null,
+                                        Collections.singletonList(simpleGrantedAuthority));
+
                         authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                         SecurityContextHolder.getContext().setAuthentication(authToken);
                         System.out.println("Authentication set successfully"); // Debug log

@@ -6,7 +6,6 @@
     import com.example.auth_service.services.PasswordService;
     import com.example.auth_service.services.TokenService;
     import jakarta.validation.Valid;
-    import org.apache.coyote.Response;
     import org.springframework.http.ResponseEntity;
     import org.springframework.validation.annotation.Validated;
     import org.springframework.web.bind.annotation.*;
@@ -37,7 +36,7 @@
             }
 
             // Hash plaintext password before saving
-            authUser.setPasswordHash(passwords.hash(authUser.getPasswordHash()));
+            authUser.setPassword(passwords.hash(authUser.getPassword()));
             AuthUser saved = users.save(authUser);
 
             URI location = ServletUriComponentsBuilder
@@ -54,7 +53,7 @@
             AuthUser u = users.findByUsername(authUser.getUsername())
                     .orElseThrow(() -> new RuntimeException("Invalid username or password"));
 
-            if (!passwords.matches(authUser.getPasswordHash(), u.getPasswordHash())) {
+            if (!passwords.matches(authUser.getPassword(), u.getPassword())) {
                 return ResponseEntity.status(401).body(Map.of("error", "Invalid username or password"));
             }
 

@@ -4,8 +4,10 @@ import jakarta.validation.Valid;
 import org.example.user_management_microservice.dtos.UserDTO;
 import org.example.user_management_microservice.dtos.UserDetailsDTO;
 import org.example.user_management_microservice.services.UserService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -35,7 +37,18 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<UserDetailsDTO> getUser(@PathVariable UUID id) { return ResponseEntity.ok(userService.findUserById(id));}
+    @PreAuthorize("hasAnyRole('CLIENT', 'ADMIN')")
+    public ResponseEntity<UserDetailsDTO> getUser(@PathVariable UUID id,
+                                                  Authentication authentication) {
+        String username = authentication.getName();
+        String role = authentication.getAuthorities().stream().findFirst().map(auth -> auth.getAuthority()).orElse("");
+
+        UserDetailsDTO user = userService.findUserById(id);
+
+        if (role.equals("ROLE_CLIENT") && !user.getUsername().equals(username)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        return ResponseEntity.ok(userService.findUserById(id));}
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -43,12 +56,29 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<UserDetailsDTO> updateUser(@PathVariable UUID id, @Valid @RequestBody UserDetailsDTO userDetailsDTO) {
+    @PreAuthorize("hasAnyRole('CLIENT', 'ADMIN')")
+    public ResponseEntity<UserDetailsDTO> updateUser(@PathVariable UUID id,
+                                                     @Valid @RequestBody UserDetailsDTO userDetailsDTO,
+                                                     Authentication authentication) {
+
+        String username = authentication.getName();
+        String role = authentication.getAuthorities().stream()
+                .findFirst()
+                .map(auth -> auth.getAuthority())
+                .orElse("");
+
+        UserDetailsDTO existingUser = userService.findUserById(id);
+
+        if (role.equals("ROLE_CLIENT") && !existingUser.getUsername().equals(username)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
         UserDetailsDTO updated = userService.updateUser(id, userDetailsDTO);
         return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteUser(@PathVariable UUID id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();

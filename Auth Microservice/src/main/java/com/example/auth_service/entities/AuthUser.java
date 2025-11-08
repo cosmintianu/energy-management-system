@@ -22,18 +22,36 @@ public class AuthUser {
     @Column(name = "password", nullable = false, length = 100) // BCrypt encrypts it up to 72 bytes
     private String password;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false)
+    private Role role = Role.CLIENT;
+
     public AuthUser() {
     }
 
-    public AuthUser(String username, String passwordHash) {
+    public AuthUser(String username, String passwordHash, Role role) {
         this.username = username;
         this.password = passwordHash;
+        this.role = role;
     }
 
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
-    public String getPassword() { return password; }
-    public void setPassword(String passwordHash) { this.password = passwordHash; }
+    public UUID getId() {return id;}
+
+    public void setId(UUID id) {this.id = id;}
+
+    public String getUsername() {return username;}
+
+    public void setUsername(String username) {this.username = username;}
+
+    public String getPassword() {return password;}
+
+    public void setPassword(String passwordHash) {this.password = passwordHash;}
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
+    }
 }

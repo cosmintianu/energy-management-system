@@ -2,6 +2,7 @@
 
 
     import com.example.auth_service.entities.AuthUser;
+    import com.example.auth_service.entities.Role;
     import com.example.auth_service.repositories.AuthUserRepository;
     import com.example.auth_service.services.PasswordService;
     import com.example.auth_service.services.TokenService;
@@ -35,8 +36,9 @@
                 return ResponseEntity.badRequest().body(Map.of("error", "Username already exists"));
             }
 
-            // Hash plaintext password before saving
             authUser.setPassword(passwords.hash(authUser.getPassword()));
+            authUser.setRole(Role.CLIENT);
+
             AuthUser saved = users.save(authUser);
 
             URI location = ServletUriComponentsBuilder
@@ -45,7 +47,9 @@
                     .toUri();
 
             return ResponseEntity.created(location)
-                    .body(Map.of("status", "created", "user", saved.getUsername()));
+                    .body(Map.of("status", "created",
+                            "user", saved.getUsername(),
+                            "role", saved.getRole().name()));
         }
 
         @PostMapping("/login")
@@ -57,7 +61,9 @@
                 return ResponseEntity.status(401).body(Map.of("error", "Invalid username or password"));
             }
 
-            String token = tokens.generate(u.getUsername());
-            return ResponseEntity.ok(Map.of("token", token, "user", u.getUsername()));
+            String token = tokens.generate(u);
+            return ResponseEntity.ok(Map.of("token", token,
+                                            "user", u.getUsername(),
+                                            "role", u.getRole().name()));
         }
     }

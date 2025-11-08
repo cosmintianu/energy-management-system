@@ -1,5 +1,6 @@
 package com.example.auth_service.services;
 
+import com.example.auth_service.entities.AuthUser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,30 +13,23 @@ import java.util.Date;
 
 @Service
 public class TokenService {
-    private final String issuer;
-    private final String audience;
-    private final long ttlSeconds;
-    private final SecretKey key;
 
-    public TokenService(
-            @Value("${auth.jwt.issuer}") String issuer,
-            @Value("${auth.jwt.audience}") String audience,
-            @Value("${auth.jwt.access-ttl-seconds}") long ttlSeconds,
-            @Value("${auth.jwt.secret}") String secret) {
-        this.issuer = issuer;
-        this.audience = audience;
-        this.ttlSeconds = ttlSeconds;
-        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-    }
+    @Value("${jwt.secret}")
+    private String secret;
 
-    public String generate(String username) {
-        Instant now = Instant.now();
+    @Value("${jwt.expiration}")
+    private long expiration;
+
+
+    public String generate(AuthUser user) {
+
+        SecretKey key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+
         return Jwts.builder()
-                .subject(username)   // resource services will resolve user data from user microservice
-                .issuer(issuer)
-                .audience().add(audience).and()
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusSeconds(ttlSeconds)))
+                .subject(user.getUsername())
+                .claim("role", user.getRole())
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(key)
                 .compact();
     }

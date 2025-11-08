@@ -12,7 +12,7 @@ public class AuthUser {
 
     @Column(nullable = false, unique = true, length = 100)
     private String username;
-
+    // TODO change field name to password for cleaner json
     @Column(nullable = false, length = 1000)
     private String passwordHash;
 

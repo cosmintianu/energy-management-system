@@ -1,4 +1,20 @@
+version: '3.8'
+
 services:
+  # Frontend (React Vite build served by Nginx)
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    container_name: ems-frontend
+    ports:
+      - "3000:80"           # Frontend accessible on localhost:3000
+    networks:
+      - microservices-network
+    depends_on:
+      - traefik
+    restart: unless-stopped
+
   # Traefik Reverse Proxy
   traefik:
     image: traefik:v3.1
@@ -7,17 +23,65 @@ services:
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--entrypoints.web.address=:80"
-      - "--experimental.plugins.jwtValidation.moduleName=github.com/legege/jwt-validation-middleware"
-      - "--experimental.plugins.jwtValidation.version=v0.2.1"
     ports:
-      - "80:80"
-      - "8080:8080"
+      - "80:80"         # API Gateway
+      - "8081:8080"     # Traefik Dashboard
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./traefik.yml:/etc/traefik/traefik.yml:ro
-      - ./plugins-storage:/plugins-storage
     networks:
       - microservices-network
+    labels:
+      - "traefik.enable=true"
+      # Define a reusable CORS middleware for API calls from http://localhost:3000
+      - "traefik.http.middlewares.api-cors.headers.accesscontrolalloworiginlist=http://localhost:3000"
+      - "traefik.http.middlewares.api-cors.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS"
+      - "traefik.http.middlewares.api-cors.headers.accesscontrolallowheaders=Content-Type,Authorization"
+      - "traefik.http.middlewares.api-cors.headers.accesscontrolallowcredentials=true"
+      - "traefik.http.middlewares.api-cors.headers.accesscontrolmaxage=3600"
+
+  # Auth Service
+  auth-service:
+    build: ./Auth Microservice
+    container_name: auth-service
+    environment:
+      - DB_IP=auth-db
+      - DB_PORT=5432
+      - DB_DBNAME=auth_microservice_db
+      - DB_USER=postgres
+      - DB_PASSWORD=cox
+      - JWT_SECRET=d9cf114c-d9ae-4620-a62e-b5872bd61385
+      - JWT_EXPIRATION=900000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auth-service.rule=Host(`localhost`) && PathPrefix(`/auth`)"
+      - "traefik.http.services.auth-service.loadbalancer.server.port=8080"
+      - "traefik.http.routers.auth-service.entrypoints=web"
+      - "traefik.http.routers.auth-service.middlewares=api-cors"
+    networks:
+      - microservices-network
+    depends_on:
+      - auth-db
+    restart: on-failure
+
+  # Auth Database
+  auth-db:
+    image: postgres:16
+    container_name: auth-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: cox
+      POSTGRES_DB: auth_microservice_db
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # User Management Service
   user-service:
     build: ./User Management Microservice
@@ -28,15 +92,18 @@ services:
       - DB_DBNAME=user_management_microservice_db
       - DB_USER=postgres
       - DB_PASSWORD=cox
-    # ports:
-    #   - "8081:8080"
+      - JWT_SECRET=d9cf114c-d9ae-4620-a62e-b5872bd61385
+      - JWT_EXPIRATION=900000
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.user-service.rule=Host(`localhost`) && PathPrefix(`/users`)"
       - "traefik.http.services.user-service.loadbalancer.server.port=8080"
       - "traefik.http.routers.user-service.entrypoints=web"
+      - "traefik.http.routers.user-service.middlewares=api-cors"
     networks:
       - microservices-network
+    depends_on:
+      - user-db
     restart: on-failure
 
   # User Database
@@ -48,12 +115,15 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: cox
       POSTGRES_DB: user_management_microservice_db
-    # ports:
-    #   - "5433:5432"
     volumes:
       - user-db-data:/var/lib/postgresql/data
     networks:
       - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Device Management Service
   device-service:
@@ -65,17 +135,19 @@ services:
       - DB_DBNAME=device_management_microservice_db
       - DB_USER=postgres
       - DB_PASSWORD=cox
+      - JWT_SECRET=d9cf114c-d9ae-4620-a62e-b5872bd61385
+      - JWT_EXPIRATION=900000
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.device-service.rule=Host(`localhost`) && PathPrefix(`/devices`)"
       - "traefik.http.services.device-service.loadbalancer.server.port=8080"
       - "traefik.http.routers.device-service.entrypoints=web"
-    # restart: on-failure
+      - "traefik.http.routers.device-service.middlewares=api-cors"
     networks:
       - microservices-network
-    # depends_on:
-    #   device-db:
-    #     condition: service_healthy
+    depends_on:
+      - device-db
+    restart: on-failure
 
   # Device Database
   device-db:
@@ -90,10 +162,17 @@ services:
       - device-db-data:/var/lib/postgresql/data
     networks:
       - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   user-db-data:
   device-db-data:
+  auth-db-data:
 
 networks:
   microservices-network:
+    driver: bridge

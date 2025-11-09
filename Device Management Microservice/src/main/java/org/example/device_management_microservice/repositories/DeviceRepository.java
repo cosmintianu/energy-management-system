@@ -10,7 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface DeviceRepository extends JpaRepository<Device, UUID> {
-    List<Device> findByName(String name);
+    List<Device> findByOwnerUsername(String name);
 
     /**
      * Query to get all devices of a user

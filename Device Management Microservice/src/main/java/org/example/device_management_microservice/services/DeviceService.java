@@ -65,7 +65,7 @@ public class DeviceService {
 
         Device existingDevice = optionalDevice.get();
         existingDevice.setName(deviceDetailsDTO.getName());
-        existingDevice.setUserId(deviceDetailsDTO.getUserId());
+        existingDevice.setOwnerUsername(deviceDetailsDTO.getOwnerUsername());
         existingDevice.setMax_consumption(deviceDetailsDTO.getMax_consumption());
 
         existingDevice =  deviceRepository.save(existingDevice);
@@ -84,4 +84,9 @@ public class DeviceService {
         LOGGER.debug("Device with id {} was deleted in db", id);
     }
 
+    public List<DeviceDTO> findDevicesByOwner(String ownerUsername) {
+        List<Device> devices = deviceRepository.findAll();deviceRepository.findByOwnerUsername(ownerUsername);
+
+        return devices.stream().map(DeviceBuilder::toDeviceDTO).collect(Collectors.toList());
+    }
 }

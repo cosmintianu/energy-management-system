@@ -17,17 +17,17 @@ public class DeviceDetailsDTO {
     @NotNull(message = "max consumption value is required")
     private double max_consumption;
 
-    @NotNull(message = "user id is required")
-    private UUID userId;
+    @NotNull(message = "owner username is required")
+    private String ownerUsername;
 
     public DeviceDetailsDTO() {
     }
 
-    public DeviceDetailsDTO(UUID id, String name, double max_consumption, UUID userId) {
+    public DeviceDetailsDTO(UUID id, String name, double max_consumption, String ownerUsername) {
         this.id = id;
         this.name = name;
         this.max_consumption = max_consumption;
-        this.userId = userId;
+        this.ownerUsername = ownerUsername;
     }
 
     public UUID getId() {
@@ -54,12 +54,12 @@ public class DeviceDetailsDTO {
         this.max_consumption = max_consumption;
     }
 
-    public UUID getUserId() {
-        return userId;
+    public String getOwnerUsername() {
+        return ownerUsername;
     }
 
-    public void setUserId(UUID userId) {
-        this.userId = userId;
+    public void setOwnerUsername(String ownerUsername) {
+        this.ownerUsername = ownerUsername;
     }
 
     @Override
@@ -69,11 +69,11 @@ public class DeviceDetailsDTO {
         DeviceDetailsDTO that = (DeviceDetailsDTO) o;
         return max_consumption == that.max_consumption &&
                 Objects.equals(name, that.name) &&
-                Objects.equals(userId, that.userId);
+                Objects.equals(ownerUsername, that.ownerUsername);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, userId, max_consumption);
+        return Objects.hash(name, ownerUsername, max_consumption);
     }
 }

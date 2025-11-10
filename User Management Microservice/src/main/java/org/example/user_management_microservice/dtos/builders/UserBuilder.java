@@ -12,7 +12,7 @@ public class UserBuilder {
     }
 
     public static UserDetailsDTO toUserDetailsDTO(User user) {
-        return new UserDetailsDTO(user.getId(), user.getUsername(), user.getEmail(), user.getAddress());
+        return new UserDetailsDTO(user.getId(), user.getUsername(), user.getAddress(), user.getEmail());
     }
 
     public static User toEntity(UserDetailsDTO userDetailsDTO) {

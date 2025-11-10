@@ -51,8 +51,8 @@ public class UserController {
         return ResponseEntity.ok(userService.findUserById(id));}
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<UserDTO>> getUsers() { return ResponseEntity.ok(userService.findAllUsers());
+    @PreAuthorize("hasAnyRole('CLIENT', 'ADMIN')")
+    public ResponseEntity<List<UserDetailsDTO>> getUsers() { return ResponseEntity.ok(userService.findAllUsers());
     }
 
     @PutMapping("/{id}")
@@ -72,6 +72,9 @@ public class UserController {
         if (role.equals("ROLE_CLIENT") && !existingUser.getUsername().equals(username)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
+
+        // ID can't be changed
+        userDetailsDTO.setUsername(existingUser.getUsername());
 
         UserDetailsDTO updated = userService.updateUser(id, userDetailsDTO);
         return ResponseEntity.ok(updated);

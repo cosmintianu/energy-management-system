@@ -43,7 +43,7 @@ public class UserService {
         return UserBuilder.toUserDetailsDTO(userOptional.get());
     }
 
-    public List<UserDTO> findAllUsers() {
+    public List<UserDetailsDTO> findAllUsers() {
         List<User> users = userRepository.findAll();
 
         if(users.isEmpty()) {
@@ -52,7 +52,7 @@ public class UserService {
         }
 
         return  users.stream()
-                .map(UserBuilder::toUserDTO)
+                .map(UserBuilder::toUserDetailsDTO)
                 .collect(Collectors.toList());
     }
 

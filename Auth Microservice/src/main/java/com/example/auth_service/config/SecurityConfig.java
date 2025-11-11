@@ -37,7 +37,18 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable())
                 .formLogin(form -> form.disable())
                 .authorizeHttpRequests(auth -> auth
+                        // Public endpoints
                         .requestMatchers("/auth/register", "/auth/login").permitAll()
+                        // Swagger endpoints
+                        .requestMatchers(
+                                "/auth/swagger-ui/**",
+                                "/auth/swagger-ui.html",
+                                "/auth/v3/api-docs/**",
+                                "/auth/api-docs/**",
+                                "/auth/swagger-resources/**",
+                                "/auth/webjars/**"
+                        ).permitAll()
+                        // All other endpoints require authentication
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

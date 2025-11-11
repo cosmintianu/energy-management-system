@@ -37,6 +37,14 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable())
                 .formLogin(form -> form.disable())
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/devices/swagger-ui/**",
+                                "/devices/swagger-ui.html",
+                                "/devices/v3/api-docs/**",
+                                "/devices/api-docs/**",
+                                "/devices/swagger-resources/**",
+                                "/devices/webjars/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

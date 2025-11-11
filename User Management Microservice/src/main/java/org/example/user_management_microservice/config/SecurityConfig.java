@@ -38,6 +38,14 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable())
                 .formLogin(form -> form.disable())
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/users/swagger-ui/**",
+                                "/users/swagger-ui.html",
+                                "/users/v3/api-docs/**",
+                                "/users/api-docs/**",
+                                "/users/swagger-resources/**",
+                                "/users/webjars/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

@@ -45,7 +45,7 @@ public class DeviceService {
         return DeviceBuilder.toDeviceDetailsDTO(optionalDevice.get());
     }
 
-    public List<DeviceDTO> findAllDevices() {
+    public List<DeviceDetailsDTO> findAllDevices() {
         List<Device> devices = deviceRepository.findAll();
 
         if(devices.isEmpty()) {
@@ -53,7 +53,7 @@ public class DeviceService {
             throw new ResourceNotFoundException("No devices found in db.");
         }
 
-        return devices.stream().map(DeviceBuilder::toDeviceDTO).collect(Collectors.toList());
+        return devices.stream().map(DeviceBuilder::toDeviceDetailsDTO).collect(Collectors.toList());
     }
 
     public DeviceDetailsDTO updateDevice(UUID id, DeviceDetailsDTO deviceDetailsDTO) {
@@ -84,9 +84,9 @@ public class DeviceService {
         LOGGER.debug("Device with id {} was deleted in db", id);
     }
 
-    public List<DeviceDTO> findDevicesByOwner(String ownerUsername) {
-        List<Device> devices = deviceRepository.findAll();deviceRepository.findByOwnerUsername(ownerUsername);
+    public List<DeviceDetailsDTO> findDevicesByOwner(String ownerUsername) {
+        List<Device> devices = deviceRepository.findByOwnerUsername(ownerUsername);
 
-        return devices.stream().map(DeviceBuilder::toDeviceDTO).collect(Collectors.toList());
+        return devices.stream().map(DeviceBuilder::toDeviceDetailsDTO).collect(Collectors.toList());
     }
 }

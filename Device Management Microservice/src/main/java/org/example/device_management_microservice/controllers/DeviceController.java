@@ -79,14 +79,14 @@ public class DeviceController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('CLIENT', 'ADMIN')")
-    public ResponseEntity<List<DeviceDTO>> getDevices(Authentication authentication) {
+    public ResponseEntity<List<DeviceDetailsDTO>> getDevices(Authentication authentication) {
         String username = authentication.getName();
         String role = authentication.getAuthorities().stream()
                 .findFirst()
                 .map(auth -> auth.getAuthority())
                 .orElse("");
 
-        List<DeviceDTO> devices;
+        List<DeviceDetailsDTO> devices;
 
         if (role.equals("ROLE_ADMIN")) {
             // Admin sees all devices

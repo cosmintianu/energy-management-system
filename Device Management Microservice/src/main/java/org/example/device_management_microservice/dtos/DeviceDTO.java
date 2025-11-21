@@ -7,11 +7,13 @@ public class DeviceDTO {
     private UUID id;
     private String name;
     private double max_consumption;
+    private String ownerUsername;
 
-    public DeviceDTO(UUID id, String name, double max_consumption) {
+    public DeviceDTO(UUID id, String name, double max_consumption, String ownerUsername) {
         this.id = id;
         this.name = name;
         this.max_consumption = max_consumption;
+        this.ownerUsername = ownerUsername;
     }
 
     public UUID getId() {
@@ -36,6 +38,14 @@ public class DeviceDTO {
 
     public void setMax_consumption(double max_consumption) {
         this.max_consumption = max_consumption;
+    }
+
+    public String getOwnerUsername() {
+        return ownerUsername;
+    }
+
+    public void setOwnerUsername(String ownerUsername) {
+        this.ownerUsername = ownerUsername;
     }
 
     @Override public boolean equals(Object o) {

@@ -21,18 +21,26 @@ public class Device {
     private String name;
 
     @Column(name = "max_consumption", nullable = false)
-    private double max_consumption;
+    private double maxConsumption;
 
-    @Column(name = "owner_username", nullable = false)
-    private String ownerUsername;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_username",
+            referencedColumnName = "username",
+            nullable = false)
+    private User owner;
 
     public Device() {
     }
 
-    public Device(String name, double max_consumption,String ownerUsername) {
+    public Device(String name, double maxConsumption) {
         this.name = name;
-        this.max_consumption = max_consumption;
-        this.ownerUsername = ownerUsername;
+        this.maxConsumption = maxConsumption;
+    }
+
+    public Device(String name, double max_consumption, User owner) {
+        this.name = name;
+        this.maxConsumption = max_consumption;
+        this.owner = owner;
     }
 
     public UUID getId() {
@@ -51,19 +59,19 @@ public class Device {
         this.name = name;
     }
 
-    public double getMax_consumption() {
-        return max_consumption;
+    public double getMaxConsumption() {
+        return maxConsumption;
     }
 
-    public void setMax_consumption(double max_consumption) {
-        this.max_consumption = max_consumption;
+    public void setMaxConsumption(double maxConsumption) {
+        this.maxConsumption = maxConsumption;
     }
 
-    public String getOwnerUsername() {
-        return ownerUsername;
+    public User getOwner() {
+        return owner;
     }
 
-    public void setOwnerUsername(String ownerUsername) {
-        this.ownerUsername = ownerUsername;
+    public void setOwner(User owner) {
+        this.owner = owner;
     }
 }

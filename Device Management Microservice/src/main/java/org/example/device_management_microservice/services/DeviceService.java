@@ -2,12 +2,14 @@ package org.example.device_management_microservice.services;
 
 
 
-import org.example.device_management_microservice.dtos.DeviceDTO;
+import jakarta.transaction.Transactional;
 import org.example.device_management_microservice.dtos.DeviceDetailsDTO;
 import org.example.device_management_microservice.dtos.builders.DeviceBuilder;
 import org.example.device_management_microservice.entities.Device;
+import org.example.device_management_microservice.entities.User;
 import org.example.device_management_microservice.handlers.exceptions.model.ResourceNotFoundException;
 import org.example.device_management_microservice.repositories.DeviceRepository;
+import org.example.device_management_microservice.repositories.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,14 +24,27 @@ import java.util.stream.Collectors;
 public class DeviceService {
     private static final Logger LOGGER = LoggerFactory.getLogger(DeviceService.class);
     private final DeviceRepository deviceRepository;
+    private final UserRepository userRepository;
 
     @Autowired
-    public DeviceService(DeviceRepository deviceRepository) {
+    public DeviceService(DeviceRepository deviceRepository,
+                         UserRepository userRepository) {
         this.deviceRepository = deviceRepository;
+        this.userRepository = userRepository;
     }
 
+    @Transactional
     public UUID createDevice(DeviceDetailsDTO deviceDetailsDTO) {
-        Device device = DeviceBuilder.toEntity(deviceDetailsDTO);
+        Optional<User> ownerOptional = userRepository.findByUsername(deviceDetailsDTO.getOwnerUsername());
+
+        if (ownerOptional.isEmpty()) {
+            LOGGER.error("User with username {} not found in db.", deviceDetailsDTO.getOwnerUsername());
+            throw new ResourceNotFoundException("User with username: " + deviceDetailsDTO.getOwnerUsername());
+        }
+
+        User owner = ownerOptional.get();
+
+        Device device = DeviceBuilder.toEntity(deviceDetailsDTO, owner);
         device =  deviceRepository.save(device);
         LOGGER.debug("Device with id {} was inserted in db", device.getId());
         return device.getId();
@@ -39,7 +54,8 @@ public class DeviceService {
         Optional<Device> optionalDevice = deviceRepository.findById(id);
         if (optionalDevice.isEmpty()) {
             LOGGER.error("Device with id {} not found in db.", id);
-            throw new ResourceNotFoundException(Device.class.getSimpleName() + " with id: " + id);
+            throw new ResourceNotFoundException(Device.class.getSimpleName()
+                    + " with id: " + id);
         }
 
         return DeviceBuilder.toDeviceDetailsDTO(optionalDevice.get());
@@ -53,9 +69,12 @@ public class DeviceService {
             throw new ResourceNotFoundException("No devices found in db.");
         }
 
-        return devices.stream().map(DeviceBuilder::toDeviceDetailsDTO).collect(Collectors.toList());
+        return devices.stream()
+                .map(DeviceBuilder::toDeviceDetailsDTO)
+                .collect(Collectors.toList());
     }
 
+    @Transactional
     public DeviceDetailsDTO updateDevice(UUID id, DeviceDetailsDTO deviceDetailsDTO) {
         Optional<Device> optionalDevice = deviceRepository.findById(id);
         if (optionalDevice.isEmpty()) {
@@ -64,15 +83,28 @@ public class DeviceService {
         }
 
         Device existingDevice = optionalDevice.get();
+
+        if (!existingDevice.getOwner().getUsername().equals(deviceDetailsDTO.getOwnerUsername())) {
+            Optional<User> newOwnerOpt = userRepository.findByUsername(deviceDetailsDTO.getOwnerUsername());
+
+            if (newOwnerOpt.isEmpty()) {
+                LOGGER.error("User with username {} not found in db.", deviceDetailsDTO.getOwnerUsername());
+                throw new ResourceNotFoundException("User with username: " + deviceDetailsDTO.getOwnerUsername());
+            }
+
+            existingDevice.setOwner(newOwnerOpt.get());
+        }
+
         existingDevice.setName(deviceDetailsDTO.getName());
-        existingDevice.setOwnerUsername(deviceDetailsDTO.getOwnerUsername());
-        existingDevice.setMax_consumption(deviceDetailsDTO.getMax_consumption());
+        existingDevice.setMaxConsumption(deviceDetailsDTO.getMax_consumption());
 
         existingDevice =  deviceRepository.save(existingDevice);
         LOGGER.debug("Device with id {} was updated in db", id);
+
         return DeviceBuilder.toDeviceDetailsDTO(existingDevice);
     }
 
+    @Transactional
     public void deleteDevice(UUID id) {
         Optional<Device> optionalDevice = deviceRepository.findById(id);
         if (optionalDevice.isEmpty()) {
@@ -85,8 +117,17 @@ public class DeviceService {
     }
 
     public List<DeviceDetailsDTO> findDevicesByOwner(String ownerUsername) {
-        List<Device> devices = deviceRepository.findByOwnerUsername(ownerUsername);
+        Optional<User> ownerOpt = userRepository.findByUsername(ownerUsername);
 
-        return devices.stream().map(DeviceBuilder::toDeviceDetailsDTO).collect(Collectors.toList());
+        if (ownerOpt.isEmpty()) {
+            LOGGER.warn("User with username {} not found in db. Returning empty list.", ownerUsername);
+            return List.of();
+        }
+
+        List<Device> devices = deviceRepository.findByOwnerUsername(ownerOpt.get().getUsername());
+
+        return devices.stream()
+                .map(DeviceBuilder::toDeviceDetailsDTO)
+                .collect(Collectors.toList());
     }
 }

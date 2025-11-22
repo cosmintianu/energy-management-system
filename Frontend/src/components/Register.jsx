@@ -28,17 +28,15 @@ function Register() {
         password: formData.password
       });
 
-      // Step 2: Create user profile in user service
-      // Login first to get token
+      // Step 2: Login to get token
       const loginResponse = await API.post('/auth/login', {
         username: formData.username,
         password: formData.password
       });
 
-      // Store token temporarily
       const token = loginResponse.data.token;
       
-      // Step 3: Create user profile with token
+      // Step 3: Create user profile in User Management service
       await API.post('/users', {
         username: formData.username,
         email: formData.email,
@@ -48,6 +46,21 @@ function Register() {
           'Authorization': `Bearer ${token}`
         }
       });
+
+      // Step 4: SYNC user to Device service
+      try {
+        await API.post('/devices/sync/users', {
+          username: formData.username
+        }, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        console.log('User synced to Device service successfully');
+      } catch (syncErr) {
+        console.error('Failed to sync user to Device service:', syncErr);
+        // Don't block registration if sync fails
+      }
 
       setSuccess('Registration successful! Redirecting to login...');
       setTimeout(() => navigate('/login'), 2000);

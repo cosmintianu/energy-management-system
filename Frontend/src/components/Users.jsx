@@ -33,7 +33,6 @@ function Users() {
 
   const fetchAuthUsers = async () => {
     try {
-      // This endpoint needs to exist in auth service
       const response = await API.get('/auth/users');
       setAuthUsers(response.data);
     } catch (err) {
@@ -52,7 +51,6 @@ function Users() {
     const action = newRole === 'ADMIN' ? 'promote to ADMIN' : 'demote to CLIENT';
     const currentUsername = localStorage.getItem('username');
     
-    // Special warning if demoting self
     if (username === currentUsername && newRole === 'CLIENT') {
       if (!window.confirm(
         `WARNING: You are about to demote yourself to CLIENT! ` +
@@ -65,14 +63,12 @@ function Users() {
     try {
       await API.put(`/auth/users/${username}/role`, { role: newRole });
       
-      // Update local state
       setAuthUsers(authUsers.map(user => 
         user.username === username 
           ? { ...user, role: newRole }
           : user
       ));
       
-      // If user demoted themselves, update localStorage and force logout
       if (username === currentUsername) {
         localStorage.setItem('role', newRole);
         
@@ -85,14 +81,12 @@ function Users() {
           window.location.reload();
         }
       } else {
-        // Show success message for other users
         alert(`User "${username}" has been ${newRole === 'ADMIN' ? 'promoted to ADMIN' : 'demoted to CLIENT'}`);
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update role');
     }
   };
-
 
   const handleEdit = (user) => {
     setEditingUser(user);
@@ -127,16 +121,26 @@ function Users() {
     if (!window.confirm(`Are you sure you want to delete user "${username}"?`)) return;
     
     try {
-      // Delete from users service
+      // Step 1: Delete from User Management service
       await API.delete(`/users/${id}`);
       
-      // Also delete from auth service
+      // Step 2: Delete from Auth service
       try {
         await API.delete(`/auth/users/${username}`);
       } catch (err) {
         console.error('Failed to delete from auth service:', err);
       }
       
+      // Step 3: SYNC deletion to Device service
+      try {
+        await API.delete(`/devices/sync/users/${username}`);
+        console.log('User deletion synced to Device service successfully');
+      } catch (syncErr) {
+        console.error('Failed to sync user deletion to Device service:', syncErr);
+        // Don't block deletion if sync fails
+      }
+      
+      // Update UI
       setUsers(users.filter(user => user.id !== id));
       setAuthUsers(authUsers.filter(user => user.username !== username));
     } catch (err) {

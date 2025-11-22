@@ -39,7 +39,7 @@ function Devices() {
 
   const fetchUsers = async () => {
     try {
-      const response = await API.get('/users');
+      const response = await API.get('/devices/users');
       setUsers(response.data);
     } catch (err) {
       console.error('Failed to fetch users:', err);

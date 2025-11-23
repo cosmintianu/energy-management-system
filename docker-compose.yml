@@ -166,10 +166,70 @@ services:
       timeout: 5s
       retries: 5
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  monitoring-db:
+    image: postgres:16
+    container_name: monitoring-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: cox
+      POSTGRES_DB: monitoring_microservice_db
+    volumes:
+      - monitoring-db-data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  monitoring-service:
+    build: ./Monitoring Microservice
+    container_name: monitoring-service
+    environment:
+      - DB_IP=monitoring-db
+      - DB_PORT=5432
+      - DB_DBNAME=monitoring_microservice_db
+      - DB_USER=postgres
+      - DB_PASSWORD=cox
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+    depends_on:
+      - monitoring-db
+      - rabbitmq
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  device-data-simulator:
+    build: ./Device Data Simulator
+    container_name: device-data-simulator
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+    depends_on:
+      rabbitmq:
+        condition: service_started
+    networks:
+      - microservices-network
+    restart: "no"  # run once, then exit
+
 volumes:
   user-db-data:
   device-db-data:
   auth-db-data:
+  monitoring-db-data:
 
 networks:
   microservices-network:

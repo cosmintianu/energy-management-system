@@ -7,6 +7,7 @@ import Users from './components/Users';
 import Devices from './components/Devices';
 import Profile from './components/Profile';
 import Navbar from './components/Navbar';
+import DeviceConsumption from './components/DeviceConsumption';
 import './App.css';
 
 function PrivateRoute({ children }) {
@@ -86,6 +87,14 @@ function App() {
             } 
           />
           <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
+          <Route 
+            path="/devices/:deviceId/consumption" 
+            element={
+              <PrivateRoute>
+                <DeviceConsumption />
+              </PrivateRoute>
+            } 
+          />
         </Routes>
       </div>
     </Router>

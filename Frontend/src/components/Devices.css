@@ -308,3 +308,17 @@
 .owner-display .form-hint {
   margin: 0;
 }
+
+.btn-view {
+  background: #17a2b8;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.btn-view:hover {
+  background: #138496;
+}

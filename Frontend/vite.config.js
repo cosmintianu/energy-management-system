@@ -5,9 +5,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
-    watch: {
-         usePolling: true, // Enable polling for file changes
-       },
+    // watch: {
+    //      usePolling: true, // Enable polling for file changes
+    //    },
+    // host: true, // needed for the Docker Container port mapping to work
+    // strictPort: true,
     proxy: {
       '/auth': {
         target: 'http://localhost', 

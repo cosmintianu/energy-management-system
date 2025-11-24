@@ -172,6 +172,9 @@ function Devices() {
                 </div>
               </div>
               <div className="device-actions">
+                <button onClick={() => window.location.href = `/devices/${device.id}/consumption`} className="btn-view">
+                  📊 View Consumption
+                </button>     
                 <button onClick={() => handleEdit(device)} className="btn-edit">
                   ✏️ Edit
                 </button>

@@ -1,6 +1,5 @@
 package org.example.device_management_microservice.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import org.example.device_management_microservice.dtos.DeviceDetailsDTO;
 import org.example.device_management_microservice.dtos.builders.DeviceBuilder;
@@ -11,7 +10,6 @@ import org.example.device_management_microservice.repositories.DeviceRepository;
 import org.example.device_management_microservice.repositories.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -25,12 +23,12 @@ public class DeviceService {
     private static final Logger LOGGER = LoggerFactory.getLogger(DeviceService.class);
     private final DeviceRepository deviceRepository;
     private final UserRepository userRepository;
-    private final DeviceSyncPublisher deviceSyncPublisher;
+    private final DeviceSyncPublisherService deviceSyncPublisher;
 
     @Autowired
     public DeviceService(DeviceRepository deviceRepository,
                          UserRepository userRepository,
-                         DeviceSyncPublisher deviceSyncPublisher) {
+                         DeviceSyncPublisherService deviceSyncPublisher) {
         this.deviceRepository = deviceRepository;
         this.userRepository = userRepository;
         this.deviceSyncPublisher = deviceSyncPublisher;

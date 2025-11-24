@@ -47,20 +47,20 @@ function Register() {
         }
       });
 
-      // Step 4: SYNC user to Device service
-      try {
-        await API.post('/devices/sync/users', {
-          username: formData.username
-        }, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        console.log('User synced to Device service successfully');
-      } catch (syncErr) {
-        console.error('Failed to sync user to Device service:', syncErr);
-        // Don't block registration if sync fails
-      }
+      // // Step 4: SYNC user to Device service
+      // try {
+      //   await API.post('/devices/sync/users', {
+      //     username: formData.username
+      //   }, {
+      //     headers: {
+      //       'Authorization': `Bearer ${token}`
+      //     }
+      //   });
+      //   console.log('User synced to Device service successfully');
+      // } catch (syncErr) {
+      //   console.error('Failed to sync user to Device service:', syncErr);
+      //   // Don't block registration if sync fails
+      // }
 
       setSuccess('Registration successful! Redirecting to login...');
       setTimeout(() => navigate('/login'), 2000);

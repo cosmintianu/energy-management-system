@@ -2,8 +2,8 @@
 
 A complete microservices-based application built with Spring Boot, React, PostgreSQL, and Traefik reverse proxy. The system includes authentication, user management, and IoT device management services with role-based access control.
 
-## 🏗️ Architecture Overview
-
+## 🏗️ Docker Architecture Overview
+![Alt text](/Deployment%20Diagram.png "Title")
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                       React Frontend                            │

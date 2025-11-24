@@ -135,6 +135,8 @@ services:
       - DB_PASSWORD=cox
       - JWT_SECRET=d9cf114c-d9ae-4620-a62e-b5872bd61385
       - JWT_EXPIRATION=900000
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.device-service.rule=Host(`localhost`) && PathPrefix(`/devices`)"
@@ -211,6 +213,12 @@ services:
     networks:
       - microservices-network
     restart: unless-stopped
+    labels:
+    - "traefik.enable=true"
+    - "traefik.http.routers.monitoring-service.rule=Host(`localhost`) && PathPrefix(`/monitoring`)"
+    - "traefik.http.services.monitoring-service.loadbalancer.server.port=8080"
+    - "traefik.http.routers.monitoring-service.entrypoints=web"
+    - "traefik.http.routers.monitoring-service.middlewares=api-cors"
 
   device-data-simulator:
     build: ./Device Data Simulator

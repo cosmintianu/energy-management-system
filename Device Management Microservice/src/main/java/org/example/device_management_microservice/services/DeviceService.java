@@ -1,7 +1,6 @@
 package org.example.device_management_microservice.services;
 
-
-
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import org.example.device_management_microservice.dtos.DeviceDetailsDTO;
 import org.example.device_management_microservice.dtos.builders.DeviceBuilder;
@@ -12,6 +11,7 @@ import org.example.device_management_microservice.repositories.DeviceRepository;
 import org.example.device_management_microservice.repositories.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -25,12 +25,15 @@ public class DeviceService {
     private static final Logger LOGGER = LoggerFactory.getLogger(DeviceService.class);
     private final DeviceRepository deviceRepository;
     private final UserRepository userRepository;
+    private final DeviceSyncPublisher deviceSyncPublisher;
 
     @Autowired
     public DeviceService(DeviceRepository deviceRepository,
-                         UserRepository userRepository) {
+                         UserRepository userRepository,
+                         DeviceSyncPublisher deviceSyncPublisher) {
         this.deviceRepository = deviceRepository;
         this.userRepository = userRepository;
+        this.deviceSyncPublisher = deviceSyncPublisher;
     }
 
     @Transactional
@@ -45,8 +48,12 @@ public class DeviceService {
         User owner = ownerOptional.get();
 
         Device device = DeviceBuilder.toEntity(deviceDetailsDTO, owner);
-        device =  deviceRepository.save(device);
+        device = deviceRepository.save(device);
         LOGGER.debug("Device with id {} was inserted in db", device.getId());
+
+        // Publish sync event
+        deviceSyncPublisher.publishDeviceCreated(device.getId().toString());
+
         return device.getId();
     }
 
@@ -98,7 +105,7 @@ public class DeviceService {
         existingDevice.setName(deviceDetailsDTO.getName());
         existingDevice.setMaxConsumption(deviceDetailsDTO.getMax_consumption());
 
-        existingDevice =  deviceRepository.save(existingDevice);
+        existingDevice = deviceRepository.save(existingDevice);
         LOGGER.debug("Device with id {} was updated in db", id);
 
         return DeviceBuilder.toDeviceDetailsDTO(existingDevice);

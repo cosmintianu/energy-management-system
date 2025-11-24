@@ -1,6 +1,6 @@
 package org.example.device_data_simulator;
 
-import org.example.device_data_simulator.service.SimulatorService;
+import org.example.device_data_simulator.service.DeviceDataProducerService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -8,10 +8,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class DeviceDataSimulatorApplication implements CommandLineRunner {
 
-    private final SimulatorService simulatorService;
+    private final DeviceDataProducerService deviceDataProducerService;
 
-    public DeviceDataSimulatorApplication(SimulatorService simulatorService) {
-        this.simulatorService = simulatorService;
+    public DeviceDataSimulatorApplication(DeviceDataProducerService deviceDataProducerService) {
+        this.deviceDataProducerService = deviceDataProducerService;
     }
 
     public static void main(String[] args) {
@@ -20,7 +20,7 @@ public class DeviceDataSimulatorApplication implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        simulatorService.runOnce();
+        deviceDataProducerService.runOnce();
         // After sending all messages, terminate the application
         System.exit(0);
     }

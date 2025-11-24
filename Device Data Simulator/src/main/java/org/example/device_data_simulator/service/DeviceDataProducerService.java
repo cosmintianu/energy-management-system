@@ -18,9 +18,9 @@ import java.util.concurrent.ThreadLocalRandom;
 
 
 @Service
-public class SimulatorService {
+public class DeviceDataProducerService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SimulatorService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DeviceDataProducerService.class);
 
     private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper;
@@ -40,7 +40,7 @@ public class SimulatorService {
     @Value("${simulator.timezone}")
     private String timezone;
 
-    public SimulatorService(RabbitTemplate rabbitTemplate, ObjectMapper objectMapper) {
+    public DeviceDataProducerService(RabbitTemplate rabbitTemplate, ObjectMapper objectMapper) {
         this.rabbitTemplate = rabbitTemplate;
         this.objectMapper = objectMapper;
     }

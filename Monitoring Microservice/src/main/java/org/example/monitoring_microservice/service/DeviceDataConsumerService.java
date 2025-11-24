@@ -18,17 +18,17 @@ import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @Service
-public class MonitoringService {
+public class DeviceDataConsumerService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(MonitoringService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DeviceDataConsumerService.class);
 
     private final ObjectMapper objectMapper;
     private final HourlyEnergyRepository repository;
     private final ZoneId zoneId;
 
-    public MonitoringService(ObjectMapper objectMapper,
-                             HourlyEnergyRepository repository,
-                             @Value("${monitoring.timezone}") String timezone) {
+    public DeviceDataConsumerService(ObjectMapper objectMapper,
+                                     HourlyEnergyRepository repository,
+                                     @Value("${monitoring.timezone}") String timezone) {
         this.objectMapper = objectMapper;
         this.repository = repository;
         this.zoneId = ZoneId.of(timezone);
@@ -68,7 +68,6 @@ public class MonitoringService {
                     deviceId, hourStart, hourly.getTotalEnergy());
         } catch (Exception e) {
             LOGGER.error("Failed to process message: {}", json, e);
-            // you can choose to rethrow to trigger retry / DLQ depending on container config
         }
     }
 

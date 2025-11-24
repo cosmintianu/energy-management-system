@@ -5,9 +5,12 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
+    watch: {
+         usePolling: true, // Enable polling for file changes
+       },
     proxy: {
       '/auth': {
-        target: 'http://localhost',
+        target: 'http://localhost', 
         changeOrigin: true
       },
       '/users': {

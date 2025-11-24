@@ -37,7 +37,7 @@ function Login() {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <h2>Login</h2>
+        <h2>Login BOSS BO</h2>
         {error && <div className="error">{error}</div>}
         <form onSubmit={handleSubmit}>
           <input

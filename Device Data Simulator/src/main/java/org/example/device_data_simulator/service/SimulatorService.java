@@ -25,11 +25,8 @@ public class SimulatorService {
     private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper;
 
-    @Value("${simulator.exchange}")
-    private String exchangeName;
-
-    @Value("${simulator.routing-key}")
-    private String routingKey;
+    @Value("${simulator.queue}")
+    private String queueName;
 
     @Value("${simulator.device-id}")
     private UUID deviceId;
@@ -61,7 +58,7 @@ public class SimulatorService {
 
             try {
                 String json = objectMapper.writeValueAsString(measurement);
-                rabbitTemplate.convertAndSend(exchangeName, routingKey, json);
+                rabbitTemplate.convertAndSend(queueName, json);
                 LOGGER.info("Sent measurement JSON: {}", json);
             } catch (Exception e) {
                 LOGGER.error("Failed to serialize measurement", e);

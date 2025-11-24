@@ -1,0 +1,7 @@
+package org.example.monitoring_microservice.repository;
+
+import org.example.monitoring_microservice.entity.MonitoredDevice;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.UUID;
+
+public interface MonitoredDeviceRepository extends JpaRepository<MonitoredDevice, UUID> {}

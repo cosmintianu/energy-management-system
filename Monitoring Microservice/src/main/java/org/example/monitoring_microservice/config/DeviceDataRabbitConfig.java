@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class RabbitConfig {
+public class DeviceDataRabbitConfig {
 
     @Value("${monitoring.exchange}")
     private String exchangeName;

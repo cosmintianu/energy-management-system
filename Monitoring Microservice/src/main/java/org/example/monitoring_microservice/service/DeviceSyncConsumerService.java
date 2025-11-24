@@ -10,21 +10,21 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.util.UUID;
 
-import static org.example.monitoring_microservice.config.SyncRabbitConfig.SYNC_QUEUE;
+import static org.example.monitoring_microservice.config.DeviceSyncRabbitConfig.DEVICE_SYNC_QUEUE;
 
 @Service
-public class DeviceSyncConsumer {
+public class DeviceSyncConsumerService {
 
     private final ObjectMapper objectMapper;
     private final MonitoredDeviceRepository deviceRepo;
 
-    public DeviceSyncConsumer(ObjectMapper objectMapper,
-                              MonitoredDeviceRepository deviceRepo) {
+    public DeviceSyncConsumerService(ObjectMapper objectMapper,
+                                     MonitoredDeviceRepository deviceRepo) {
         this.objectMapper = objectMapper;
         this.deviceRepo = deviceRepo;
     }
 
-    @RabbitListener(queues = SYNC_QUEUE)
+    @RabbitListener(queues = DEVICE_SYNC_QUEUE)
     @Transactional
     public void handleSyncEvent(String json) {
         try {

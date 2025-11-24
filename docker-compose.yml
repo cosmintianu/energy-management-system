@@ -92,6 +92,8 @@ services:
       - DB_PASSWORD=cox
       - JWT_SECRET=d9cf114c-d9ae-4620-a62e-b5872bd61385
       - JWT_EXPIRATION=900000
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.user-service.rule=Host(`localhost`) && PathPrefix(`/users`)"

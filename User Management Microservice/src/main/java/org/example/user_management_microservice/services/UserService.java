@@ -1,6 +1,5 @@
 package org.example.user_management_microservice.services;
 
-import org.example.user_management_microservice.dtos.UserDTO;
 import org.example.user_management_microservice.dtos.UserDetailsDTO;
 import org.example.user_management_microservice.dtos.builders.UserBuilder;
 import org.example.user_management_microservice.entities.User;
@@ -20,16 +19,21 @@ import java.util.stream.Collectors;
 public class UserService {
     private static final Logger LOGGER = LoggerFactory.getLogger(UserService.class);
     private final UserRepository userRepository;
+    private final UserSyncPublisherService userSyncPublisher;
 
     @Autowired
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, UserSyncPublisherService userSyncPublisher) {
         this.userRepository = userRepository;
+        this.userSyncPublisher = userSyncPublisher;
     }
 
     public UUID createUser(UserDetailsDTO userDetailsDTO) {
         User user = UserBuilder.toEntity(userDetailsDTO);
         user = userRepository.save(user);
         LOGGER.debug("User with id {} was inserted in db", user.getId());
+
+        userSyncPublisher.publishUserCreated(user.getUsername());
+
         return user.getId();
     }
 

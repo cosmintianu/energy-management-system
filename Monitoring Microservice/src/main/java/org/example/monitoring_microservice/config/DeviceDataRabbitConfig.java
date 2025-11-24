@@ -11,30 +11,12 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class DeviceDataRabbitConfig {
 
-    @Value("${monitoring.exchange}")
-    private String exchangeName;
-
     @Value("${monitoring.queue}")
     private String queueName;
-
-    @Value("${monitoring.routing-key}")
-    private String routingKey;
-
-    @Bean
-    public TopicExchange deviceDataExchange() {
-        return new TopicExchange(exchangeName, true, false);
-    }
 
     @Bean
     public Queue deviceDataQueue() {
         return new Queue(queueName, true);
     }
 
-    @Bean
-    public Binding deviceDataBinding(Queue deviceDataQueue, TopicExchange deviceDataExchange) {
-        return BindingBuilder
-                .bind(deviceDataQueue)
-                .to(deviceDataExchange)
-                .with(routingKey);
-    }
 }

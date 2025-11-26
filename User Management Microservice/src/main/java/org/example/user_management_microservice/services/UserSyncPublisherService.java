@@ -1,5 +1,6 @@
 package org.example.user_management_microservice.services;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import tools.jackson.databind.ObjectMapper;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
@@ -23,10 +24,21 @@ public class UserSyncPublisherService {
         try {
             String json = objectMapper.writeValueAsString(event);
 
-            System.out.println("SENT: " + json);
+            System.out.println("User created sync event published " + username);
             rabbitTemplate.convertAndSend(SYNC_EXCHANGE, USER_SYNC_ROUTING_KEY, json);
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    public void publishUserDeleted(String username) {
+        SyncEvent event = new SyncEvent("USER", "DELETED", username);
+        try {
+            String json = objectMapper.writeValueAsString(event);
+            rabbitTemplate.convertAndSend(SYNC_EXCHANGE, USER_SYNC_ROUTING_KEY, json);
+            System.out.println("User deleted sync event published " + username);
+        } catch (Exception e) {
+            System.err.println("Failed to publish USER.DELETED event " + e.toString());
         }
     }
 

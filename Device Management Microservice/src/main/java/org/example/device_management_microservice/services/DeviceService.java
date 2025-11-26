@@ -119,6 +119,8 @@ public class DeviceService {
 
         deviceRepository.delete(optionalDevice.get());
         LOGGER.debug("Device with id {} was deleted in db", id);
+
+        deviceSyncPublisher.publishDeviceDeleted(id.toString());
     }
 
     public List<DeviceDetailsDTO> findDevicesByOwner(String ownerUsername) {

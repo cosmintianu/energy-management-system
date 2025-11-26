@@ -29,19 +29,38 @@ public class DeviceSyncConsumerService {
     public void handleSyncEvent(String json) {
         try {
             SyncEvent event = objectMapper.readValue(json, SyncEvent.class);
-            if (!"DEVICE".equalsIgnoreCase(event.getType())
-                    || !"CREATED".equalsIgnoreCase(event.getEvent()))
-                return;
 
-            UUID deviceId = UUID.fromString(event.getId());
-            if (!deviceRepo.existsById(deviceId)) {
-                MonitoredDevice d = new MonitoredDevice();
-                d.setDeviceId(deviceId);
-                System.out.println("Received device with id " + deviceId);
-                deviceRepo.save(d);
+            if (!"DEVICE".equalsIgnoreCase(event.getType())) {
+                return;
+            }
+
+            if ("CREATED".equalsIgnoreCase(event.getEvent())) {
+                handleDeviceCreated(event.getId());
+            } else if ("DELETED".equalsIgnoreCase(event.getEvent())) {
+                handleDeviceDeleted(event.getId());
             }
         } catch (Exception e) {
-            e.printStackTrace(); // Or use a logger
+            System.err.println("Failed to process sync event " + json + " exception: " + e);
+        }
+    }
+
+    private void handleDeviceCreated(String id) {
+        UUID deviceId = UUID.fromString(id);
+        if (!deviceRepo.existsById(deviceId)) {
+            MonitoredDevice d = new MonitoredDevice();
+            d.setDeviceId(deviceId);
+            deviceRepo.save(d);
+            System.out.println("Device created sync event consumed " + deviceId);
+
+        }
+    }
+
+    private void handleDeviceDeleted(String id) {
+        UUID deviceId = UUID.fromString(id);
+        if (deviceRepo.existsById(deviceId)) {
+            deviceRepo.deleteById(deviceId);
+            System.out.println("Device deleted sync event consumed " + deviceId);
+
         }
     }
 }

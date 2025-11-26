@@ -87,6 +87,8 @@ public class UserService {
 
         userRepository.delete(userOptional.get());
         LOGGER.debug("User with id {} was deleted in db", id);
+
+        userSyncPublisher.publishUserDeleted(userOptional.get().getUsername());
     }
 
 }

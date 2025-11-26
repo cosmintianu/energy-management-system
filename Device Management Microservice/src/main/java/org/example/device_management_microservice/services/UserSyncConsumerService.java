@@ -33,27 +33,37 @@ public class UserSyncConsumerService {
     public void handleSyncEvent(String json) {
         try {
             SyncEvent event = objectMapper.readValue(json, SyncEvent.class);
-            LOGGER.info("Received sync event: type={}, event={}, id={}",
-                    event.getType(), event.getEvent(), event.getId());
 
-            if ("USER".equalsIgnoreCase(event.getType())
-                    && "CREATED".equalsIgnoreCase(event.getEvent())) {
-                handleUserCreated(event.getId());
+            if ("USER".equalsIgnoreCase(event.getType())) {
+                if ("CREATED".equalsIgnoreCase(event.getEvent())) {
+                    handleUserCreated(event.getId());
+                } else if ("DELETED".equalsIgnoreCase(event.getEvent())) {
+                    handleUserDeleted(event.getId());
+                }
             } else if ("DEVICE".equalsIgnoreCase(event.getType())
                     && "CREATED".equalsIgnoreCase(event.getEvent())) {
-                LOGGER.debug("Ignoring DEVICE.CREATED event (published by this service)");
+                LOGGER.debug("Ignoring DEVICE.CREATED event from self");
             }
         } catch (Exception e) {
             LOGGER.error("Failed to process sync event: {}", json, e);
         }
     }
 
+    private void handleUserDeleted(String username) {
+        userRepository.findByUsername(username).ifPresent(user -> {
+            userRepository.delete(user);
+
+            System.out.println("User deleted sync event consumed " + username);
+
+        });
+    }
+
     private void handleUserCreated(String username) {
         if (!userRepository.existsByUsername(username)) {
             User user = new User(username);
             userRepository.save(user);
-            System.out.println("Synced new user " +  username);
-            LOGGER.info("Synced new user: {}", username);
+
+            System.out.println("User created sync event consumed " + username);
         } else {
             LOGGER.debug("User {} already exists, skipping sync", username);
         }

@@ -10,7 +10,14 @@ public class MonitoredDevice {
     @Column(name = "device_id", nullable = false)
     private UUID deviceId;
 
-    public UUID getDeviceId() {return deviceId;}
+    @Column(name = "max_consumption", nullable = false)
+    private double maxConsumption; // Default threshold in kWh
 
-    public void setDeviceId(UUID deviceId) {this.deviceId = deviceId;}
+    public UUID getDeviceId() { return deviceId; }
+
+    public void setDeviceId(UUID deviceId) { this.deviceId = deviceId; }
+
+    public double getMaxConsumption() { return maxConsumption; }
+
+    public void setMaxConsumption(double maxConsumption) { this.maxConsumption = maxConsumption; }
 }

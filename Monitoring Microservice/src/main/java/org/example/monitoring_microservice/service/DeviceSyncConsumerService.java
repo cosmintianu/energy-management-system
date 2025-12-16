@@ -8,6 +8,7 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.example.monitoring_microservice.config.DeviceSyncRabbitConfig.DEVICE_SYNC_QUEUE;
@@ -34,24 +35,50 @@ public class DeviceSyncConsumerService {
                 return;
             }
 
-            if ("CREATED".equalsIgnoreCase(event.getEvent())) {
-                handleDeviceCreated(event.getId());
-            } else if ("DELETED".equalsIgnoreCase(event.getEvent())) {
-                handleDeviceDeleted(event.getId());
+            switch (event.getEvent().toUpperCase()) {
+                case "CREATED":
+                    handleDeviceCreated(event.getId(), event.getMaxConsumption());
+                    break;
+                case "UPDATED":
+                    handleDeviceUpdated(event.getId(), event.getMaxConsumption());
+                    break;
+                case "DELETED":
+                    handleDeviceDeleted(event.getId());
+                    break;
             }
         } catch (Exception e) {
             System.err.println("Failed to process sync event " + json + " exception: " + e);
         }
     }
 
-    private void handleDeviceCreated(String id) {
+    private void handleDeviceCreated(String id, Double maxConsumption) {
         UUID deviceId = UUID.fromString(id);
         if (!deviceRepo.existsById(deviceId)) {
             MonitoredDevice d = new MonitoredDevice();
             d.setDeviceId(deviceId);
+            if (maxConsumption != null) {
+                d.setMaxConsumption(maxConsumption);
+            }
             deviceRepo.save(d);
-            System.out.println("Device created sync event consumed " + deviceId);
+            System.out.println("Device created sync event consumed: " + deviceId + 
+                    " with maxConsumption: " + d.getMaxConsumption());
+        }
+    }
 
+    private void handleDeviceUpdated(String id, Double maxConsumption) {
+        UUID deviceId = UUID.fromString(id);
+        Optional<MonitoredDevice> deviceOpt = deviceRepo.findById(deviceId);
+        if (deviceOpt.isPresent()) {
+            MonitoredDevice device = deviceOpt.get();
+            if (maxConsumption != null) {
+                device.setMaxConsumption(maxConsumption);
+                deviceRepo.save(device);
+                System.out.println("Device updated sync event consumed: " + deviceId + 
+                        " new maxConsumption: " + maxConsumption);
+            }
+        } else {
+            // Device doesn't exist, create it
+            handleDeviceCreated(id, maxConsumption);
         }
     }
 
@@ -60,7 +87,6 @@ public class DeviceSyncConsumerService {
         if (deviceRepo.existsById(deviceId)) {
             deviceRepo.deleteById(deviceId);
             System.out.println("Device deleted sync event consumed " + deviceId);
-
         }
     }
 }

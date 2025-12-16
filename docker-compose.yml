@@ -198,9 +198,9 @@ services:
       timeout: 5s
       retries: 5
 
-  monitoring-service:
+  monitoring-service-1:
     build: ./Monitoring Microservice
-    container_name: monitoring-service
+    container_name: monitoring-service-1
     environment:
       - DB_IP=monitoring-db
       - DB_PORT=5432
@@ -209,9 +209,12 @@ services:
       - DB_PASSWORD=cox
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
+      - MONITORING_QUEUE=monitoring.ingestion.queue.1
+      - INSTANCE_ID=1
     depends_on:
       - monitoring-db
       - rabbitmq
+      - load-balancer-service
     networks:
       - microservices-network
     restart: unless-stopped
@@ -222,6 +225,60 @@ services:
     - "traefik.http.routers.monitoring-service.entrypoints=web"
     - "traefik.http.routers.monitoring-service.middlewares=api-cors"
 
+  monitoring-service-2:
+    build: ./Monitoring Microservice
+    container_name: monitoring-service-2
+    environment:
+      - DB_IP=monitoring-db
+      - DB_PORT=5432
+      - DB_DBNAME=monitoring_microservice_db
+      - DB_USER=postgres
+      - DB_PASSWORD=cox
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - MONITORING_QUEUE=monitoring.ingestion.queue.2
+      - INSTANCE_ID=2
+    depends_on:
+      - monitoring-db
+      - rabbitmq
+      - load-balancer-service
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  monitoring-service-3:
+    build: ./Monitoring Microservice
+    container_name: monitoring-service-3
+    environment:
+      - DB_IP=monitoring-db
+      - DB_PORT=5432
+      - DB_DBNAME=monitoring_microservice_db
+      - DB_USER=postgres
+      - DB_PASSWORD=cox
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - MONITORING_QUEUE=monitoring.ingestion.queue.3
+      - INSTANCE_ID=3
+    depends_on:
+      - monitoring-db
+      - rabbitmq
+      - load-balancer-service
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  load-balancer-service:
+    build: ./Load Balancer Service
+    container_name: load-balancer-service
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+    depends_on:
+      - rabbitmq
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
   device-data-simulator:
     build: ./Device Data Simulator
     container_name: device-data-simulator
@@ -230,6 +287,8 @@ services:
       - RABBITMQ_PORT=5672
     depends_on:
       rabbitmq:
+        condition: service_started
+      load-balancer-service:
         condition: service_started
     networks:
       - microservices-network

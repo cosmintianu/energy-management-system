@@ -11,7 +11,10 @@ public class MonitoredDevice {
     private UUID deviceId;
 
     @Column(name = "max_consumption", nullable = false)
-    private double maxConsumption; // Default threshold in kWh
+    private double maxConsumption; // Max hourly consumption threshold in kWh
+
+    @Column(name = "owner_username")
+    private String ownerUsername; // Username of the device owner for notifications
 
     public UUID getDeviceId() { return deviceId; }
 
@@ -20,4 +23,8 @@ public class MonitoredDevice {
     public double getMaxConsumption() { return maxConsumption; }
 
     public void setMaxConsumption(double maxConsumption) { this.maxConsumption = maxConsumption; }
+
+    public String getOwnerUsername() { return ownerUsername; }
+
+    public void setOwnerUsername(String ownerUsername) { this.ownerUsername = ownerUsername; }
 }

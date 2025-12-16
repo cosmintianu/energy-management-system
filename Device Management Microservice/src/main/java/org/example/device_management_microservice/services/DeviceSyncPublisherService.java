@@ -31,8 +31,8 @@ public class DeviceSyncPublisherService {
         }
     }
 
-    public void publishDeviceCreated(String deviceId, double maxConsumption) {
-        SyncEvent event = new SyncEvent("DEVICE", "CREATED", deviceId, maxConsumption);
+    public void publishDeviceCreated(String deviceId, double maxConsumption, String ownerUsername) {
+        SyncEvent event = new SyncEvent("DEVICE", "CREATED", deviceId, maxConsumption, ownerUsername);
         try {
             String json = objectMapper.writeValueAsString(event);
             System.out.println("Device created sync event published " + json);
@@ -42,8 +42,8 @@ public class DeviceSyncPublisherService {
         }
     }
 
-    public void publishDeviceUpdated(String deviceId, double maxConsumption) {
-        SyncEvent event = new SyncEvent("DEVICE", "UPDATED", deviceId, maxConsumption);
+    public void publishDeviceUpdated(String deviceId, double maxConsumption, String ownerUsername) {
+        SyncEvent event = new SyncEvent("DEVICE", "UPDATED", deviceId, maxConsumption, ownerUsername);
         try {
             String json = objectMapper.writeValueAsString(event);
             System.out.println("Device updated sync event published " + json);

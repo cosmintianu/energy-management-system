@@ -97,10 +97,11 @@ public class DeviceDataConsumerService {
 
             // Get device-specific max consumption threshold
             double maxConsumption = monitoredDevice.getMaxConsumption();
+            String ownerUsername = monitoredDevice.getOwnerUsername();
 
             // Check for overconsumption - trigger if threshold is exceeded
             if (previousEnergy <= maxConsumption && newEnergy > maxConsumption) {
-                sendOverconsumptionNotification(deviceId, hourStart, newEnergy, maxConsumption);
+                sendOverconsumptionNotification(deviceId, hourStart, newEnergy, maxConsumption, ownerUsername);
             }
         } catch (Exception e) {
             LOGGER.error("[Instance {}] Failed to process message: {}", instanceId, json, e);
@@ -108,20 +109,22 @@ public class DeviceDataConsumerService {
     }
 
     private void sendOverconsumptionNotification(UUID deviceId, Instant hourStart, 
-                                                  double totalEnergy, double maxConsumption) {
+                                                  double totalEnergy, double maxConsumption,
+                                                  String ownerUsername) {
         try {
             String notification = objectMapper.writeValueAsString(new OverconsumptionNotification(
                     deviceId.toString(),
                     hourStart.toString(),
                     totalEnergy,
                     maxConsumption,
+                    ownerUsername,
                     "Device " + deviceId + " exceeded hourly consumption limit. " +
                             "Current: " + totalEnergy + " kWh, Limit: " + maxConsumption + " kWh"
             ));
             
             rabbitTemplate.convertAndSend(overconsumptionQueue, notification);
-            LOGGER.warn("[Instance {}] OVERCONSUMPTION ALERT: Device {} at hour {} - {} kWh (limit: {} kWh)",
-                    instanceId, deviceId, hourStart, totalEnergy, maxConsumption);
+            LOGGER.warn("[Instance {}] OVERCONSUMPTION ALERT: Device {} (owner: {}) at hour {} - {} kWh (limit: {} kWh)",
+                    instanceId, deviceId, ownerUsername, hourStart, totalEnergy, maxConsumption);
         } catch (Exception e) {
             LOGGER.error("[Instance {}] Failed to send overconsumption notification", instanceId, e);
         }
@@ -138,16 +141,19 @@ public class DeviceDataConsumerService {
         private String hourStart;
         private double currentConsumption;
         private double maxAllowed;
+        private String ownerUsername;
         private String message;
 
         public OverconsumptionNotification() {}
 
         public OverconsumptionNotification(String deviceId, String hourStart, 
-                                           double currentConsumption, double maxAllowed, String message) {
+                                           double currentConsumption, double maxAllowed,
+                                           String ownerUsername, String message) {
             this.deviceId = deviceId;
             this.hourStart = hourStart;
             this.currentConsumption = currentConsumption;
             this.maxAllowed = maxAllowed;
+            this.ownerUsername = ownerUsername;
             this.message = message;
         }
 
@@ -159,6 +165,8 @@ public class DeviceDataConsumerService {
         public void setCurrentConsumption(double currentConsumption) { this.currentConsumption = currentConsumption; }
         public double getMaxAllowed() { return maxAllowed; }
         public void setMaxAllowed(double maxAllowed) { this.maxAllowed = maxAllowed; }
+        public String getOwnerUsername() { return ownerUsername; }
+        public void setOwnerUsername(String ownerUsername) { this.ownerUsername = ownerUsername; }
         public String getMessage() { return message; }
         public void setMessage(String message) { this.message = message; }
     }

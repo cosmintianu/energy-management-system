@@ -37,10 +37,10 @@ public class DeviceSyncConsumerService {
 
             switch (event.getEvent().toUpperCase()) {
                 case "CREATED":
-                    handleDeviceCreated(event.getId(), event.getMaxConsumption());
+                    handleDeviceCreated(event.getId(), event.getMaxConsumption(), event.getOwnerUsername());
                     break;
                 case "UPDATED":
-                    handleDeviceUpdated(event.getId(), event.getMaxConsumption());
+                    handleDeviceUpdated(event.getId(), event.getMaxConsumption(), event.getOwnerUsername());
                     break;
                 case "DELETED":
                     handleDeviceDeleted(event.getId());
@@ -51,7 +51,7 @@ public class DeviceSyncConsumerService {
         }
     }
 
-    private void handleDeviceCreated(String id, Double maxConsumption) {
+    private void handleDeviceCreated(String id, Double maxConsumption, String ownerUsername) {
         UUID deviceId = UUID.fromString(id);
         if (!deviceRepo.existsById(deviceId)) {
             MonitoredDevice d = new MonitoredDevice();
@@ -59,26 +59,34 @@ public class DeviceSyncConsumerService {
             if (maxConsumption != null) {
                 d.setMaxConsumption(maxConsumption);
             }
+            if (ownerUsername != null) {
+                d.setOwnerUsername(ownerUsername);
+            }
             deviceRepo.save(d);
             System.out.println("Device created sync event consumed: " + deviceId + 
-                    " with maxConsumption: " + d.getMaxConsumption());
+                    " with maxConsumption: " + d.getMaxConsumption() +
+                    " owner: " + d.getOwnerUsername());
         }
     }
 
-    private void handleDeviceUpdated(String id, Double maxConsumption) {
+    private void handleDeviceUpdated(String id, Double maxConsumption, String ownerUsername) {
         UUID deviceId = UUID.fromString(id);
         Optional<MonitoredDevice> deviceOpt = deviceRepo.findById(deviceId);
         if (deviceOpt.isPresent()) {
             MonitoredDevice device = deviceOpt.get();
             if (maxConsumption != null) {
                 device.setMaxConsumption(maxConsumption);
-                deviceRepo.save(device);
-                System.out.println("Device updated sync event consumed: " + deviceId + 
-                        " new maxConsumption: " + maxConsumption);
             }
+            if (ownerUsername != null) {
+                device.setOwnerUsername(ownerUsername);
+            }
+            deviceRepo.save(device);
+            System.out.println("Device updated sync event consumed: " + deviceId + 
+                    " new maxConsumption: " + maxConsumption +
+                    " owner: " + ownerUsername);
         } else {
             // Device doesn't exist, create it
-            handleDeviceCreated(id, maxConsumption);
+            handleDeviceCreated(id, maxConsumption, ownerUsername);
         }
     }
 

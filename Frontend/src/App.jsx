@@ -8,6 +8,9 @@ import Devices from './components/Devices';
 import Profile from './components/Profile';
 import Navbar from './components/Navbar';
 import DeviceConsumption from './components/DeviceConsumption';
+import GlobalChat from './components/GlobalChat';
+import SupportChat from './components/SupportChat';
+import Notifications from './components/Notifications';
 import './App.css';
 
 function PrivateRoute({ children }) {
@@ -95,6 +98,30 @@ function App() {
               </PrivateRoute>
             } 
           />
+            <Route
+              path="/chat"
+              element={
+                <PrivateRoute>
+                  <GlobalChat />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/support"
+              element={
+                <PrivateRoute>
+                  <SupportChat />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/notifications"
+              element={
+                <PrivateRoute>
+                  <Notifications />
+                </PrivateRoute>
+              }
+            />
         </Routes>
       </div>
     </Router>

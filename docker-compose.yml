@@ -235,6 +235,22 @@ services:
       - microservices-network
     restart: "no"  # run once, then exit
 
+  websocket-and-support-service:
+    build: ./Websocket and Support Service
+    container_name: websocket-service
+    environment:
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - RABBITMQ_QUEUE=notif.overconsumption.queue
+    env_file:
+      - ./Websocket and Support Service/.env
+    ports:
+      - "8000:8000"
+    networks:
+      - microservices-network
+    depends_on:
+      - rabbitmq
+    restart: unless-stopped
+
 volumes:
   user-db-data:
   device-db-data:

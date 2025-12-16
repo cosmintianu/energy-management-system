@@ -18,6 +18,9 @@ function Navbar() {
         <Link to="/dashboard">Dashboard</Link>
         {role === 'ADMIN' && <Link to="/users">Users</Link>}
         <Link to="/devices">Devices</Link>
+        <Link to="/chat">Chat</Link>
+        <Link to="/support">Support</Link>
+        <Link to="/notifications">Notifications</Link>
         <Link to="/profile">Profile</Link>
       </div>
       <div className="nav-user">

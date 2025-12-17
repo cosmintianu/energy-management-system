@@ -1,7 +1,6 @@
 package org.example.device_management_microservice.services;
 
 
-import jakarta.xml.bind.SchemaOutputResolver;
 import org.example.device_management_microservice.dtos.SyncEvent;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
@@ -32,14 +31,25 @@ public class DeviceSyncPublisherService {
         }
     }
 
-    public void publishDeviceCreated(String deviceId) {
-        SyncEvent event = new SyncEvent("DEVICE", "CREATED", deviceId);
+    public void publishDeviceCreated(String deviceId, double maxConsumption, String ownerUsername) {
+        SyncEvent event = new SyncEvent("DEVICE", "CREATED", deviceId, maxConsumption, ownerUsername);
         try {
             String json = objectMapper.writeValueAsString(event);
             System.out.println("Device created sync event published " + json);
             rabbitTemplate.convertAndSend(SYNC_EXCHANGE, DEVICE_SYNC_ROUTING_KEY, json);
         } catch (Exception e) {
-            e.printStackTrace(); // Or use a logger
+            e.printStackTrace();
+        }
+    }
+
+    public void publishDeviceUpdated(String deviceId, double maxConsumption, String ownerUsername) {
+        SyncEvent event = new SyncEvent("DEVICE", "UPDATED", deviceId, maxConsumption, ownerUsername);
+        try {
+            String json = objectMapper.writeValueAsString(event);
+            System.out.println("Device updated sync event published " + json);
+            rabbitTemplate.convertAndSend(SYNC_EXCHANGE, DEVICE_SYNC_ROUTING_KEY, json);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }

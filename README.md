@@ -198,16 +198,78 @@ The React frontend (served by Nginx in its own container) talks only to Traefik 
 ### 6. Device Data Simulator
 - **Container**: `device-data-simulator`
 - **Responsibilities**:
-  - Generate realistic device energy measurements
-  - Send JSON messages to the device data queue in RabbitMQ
+  - Generate realistic device energy measurements for multiple devices
+  - Send JSON messages to the simulator data queue in RabbitMQ
 - **Notes**:
-  - Sends to a simple queue using the default exchange
+  - Supports multiple device IDs (comma-separated in config)
+  - Sends to `simulator.data.queue` which is consumed by the Load Balancer
   - Used for demo/testing, not exposed via HTTP
 
-**Configuration**:
-- Queue name: `device.data.queue`
-- Producer: `rabbitTemplate.convertAndSend("device.data.queue", json)`
-- Consumer: `@RabbitListener(queues = "device.data.queue")`
+**Configuration** (application.properties):
+- `simulator.device-ids` - Comma-separated list of device UUIDs to simulate
+- `simulator.readings-count` - Number of readings to generate per device
+- `simulator.interval-minutes` - Logical time interval between readings
+
+### 7. Load Balancer Service
+- **Container**: `load-balancer-service`
+- **Port**: 8080 (internal)
+- **Responsibilities**:
+  - Consume device measurements from the simulator queue
+  - Distribute measurements to monitoring replicas using hash-based routing
+  - Ensure consistent device-to-replica mapping
+
+**Architecture**:
+- Input Queue: `simulator.data.queue`
+- Output Queues: `monitoring.ingestion.queue.1`, `monitoring.ingestion.queue.2`, `monitoring.ingestion.queue.3`
+- Algorithm: Hash-based routing (`deviceId.hashCode() % replicaCount`)
+
+**Why hash-based routing?**
+- Ensures all measurements from the same device always go to the same monitoring replica
+- Maintains data locality for per-device aggregations
+- Simple and deterministic (not round-robin)
+
+### 8. Monitoring Service (3 Replicas)
+- **Containers**: `monitoring-service-1`, `monitoring-service-2`, `monitoring-service-3`
+- **Port**: 8080 (internal, load-balanced via Traefik)
+- **Database**: `monitoring_db` (shared by all replicas)
+- **Responsibilities**:
+  - Consume device measurements from instance-specific ingestion queues
+  - Aggregate energy data into hourly buckets per device
+  - Detect overconsumption and send notifications
+  - Expose historical consumption per device and day
+
+**Instance Configuration**:
+Each replica has:
+- `MONITORING_QUEUE` - Instance-specific queue (e.g., `monitoring.ingestion.queue.1`)
+- `INSTANCE_ID` - Unique identifier for logging (e.g., `monitoring-1`)
+
+**Overconsumption Detection**:
+- Each device has a `maxConsumption` threshold (synced from Device Management)
+- When hourly consumption exceeds the threshold, a notification is sent
+- Notifications include: deviceId, hourStart, currentConsumption, maxAllowed, ownerUsername
+
+**Endpoints**:
+- `GET /monitoring/device/{deviceId}/daily?date=YYYY-MM-DD`  
+  Returns 24 entries (hours 0–23) with total energy in kWh for each hour.
+
+### 9. WebSocket & Support Service
+- **Container**: `websocket-service`
+- **Port**: 8000 (exposed)
+- **Technology**: Python FastAPI + aio-pika
+- **Responsibilities**:
+  - Real-time WebSocket connections for chat and notifications
+  - Consume overconsumption notifications from RabbitMQ
+  - Broadcast notifications to connected frontend clients
+  - AI-powered support chat (Gemini integration)
+
+**WebSocket Rooms**:
+- `/ws/notifications` - Overconsumption alerts
+- `/ws/chat` - Global chat room
+- `/ws/support` - AI support chat
+
+**RabbitMQ Integration**:
+- Queue: `notif.overconsumption.queue`
+- Broadcasts received messages to all clients in the notifications room
 
 
 ## 🔄 Event-Driven Synchronization
@@ -261,35 +323,113 @@ Frontend change:
 
 ### Device Sync Flow
 
-Goal: duplicate device IDs into the Monitoring DB to validate measurements and aggregate per device.
+Goal: duplicate device IDs, maxConsumption thresholds, and owner information into the Monitoring DB to validate measurements, aggregate per device, and send targeted overconsumption notifications.
 
 **Flow**:
 1. Device Management Service:
    - After creating a device, publishes a `DEVICE.CREATED` event to `sync.events.exchange` with routing key `devices`.
+   - After updating a device, publishes a `DEVICE.UPDATED` event.
+   - After deleting a device, publishes a `DEVICE.DELETED` event.
    - Event payload:  
-     `{ "type": "DEVICE", "event": "CREATED", "id": "<device-uuid>" }`
+     ```json
+     { 
+       "type": "DEVICE", 
+       "event": "CREATED|UPDATED|DELETED", 
+       "id": "<device-uuid>",
+       "maxConsumption": 2.5,
+       "ownerUsername": "john_doe"
+     }
+     ```
 
 2. Monitoring Service:
    - Listens on `sync.monitoring-service.queue`.
-   - For `DEVICE.CREATED` events, inserts the device ID into its local `devices` table if it does not exist.
+   - For `DEVICE.CREATED` events, inserts the device with its maxConsumption and ownerUsername.
+   - For `DEVICE.UPDATED` events, updates the maxConsumption and ownerUsername.
+   - For `DEVICE.DELETED` events, removes the device from the local table.
 
 3. When a new measurement arrives from the simulator:
-   - Monitoring Service first checks if the device ID exists in the local `devices` table.
-   - If not, it ignores or logs the measurement.
-   - If yes, it aggregates into hourly energy records.
+   - Monitoring Service first checks if the device ID exists in the local `monitored_devices` table.
+   - If not, it skips the measurement (device not registered).
+   - If yes, it aggregates into hourly energy records and checks for overconsumption using the device's `maxConsumption` threshold.
+
+4. Overconsumption notifications include `ownerUsername` so the frontend can filter notifications per user.
 
 
 ## 📡 Device Data & Monitoring
 
+### Data Flow Architecture
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────────┐
+│  Device Data    │────▶│  Load Balancer  │────▶│  Monitoring Replica │
+│   Simulator     │     │    Service      │     │     1, 2, or 3      │
+└─────────────────┘     └─────────────────┘     └─────────────────────┘
+        │                       │                         │
+        ▼                       ▼                         ▼
+simulator.data.queue    Hash-based routing      monitoring.ingestion.queue.N
+                        (deviceId % 3)                    │
+                                                          ▼
+                                                  ┌───────────────┐
+                                                  │ monitoring_db │
+                                                  │   (shared)    │
+                                                  └───────────────┘
+                                                          │
+                                                          ▼ (if overconsumption)
+                                              ┌─────────────────────────┐
+                                              │ notif.overconsumption   │
+                                              │        .queue           │
+                                              └─────────────────────────┘
+                                                          │
+                                                          ▼
+                                              ┌─────────────────────────┐
+                                              │  WebSocket Service      │
+                                              │  (broadcasts to users)  │
+                                              └─────────────────────────┘
+```
+
 ### Device Data Queue
 
-- Queue: `device.data.queue`
-- Exchange: default (empty name), using queue name only
+- Input Queue: `simulator.data.queue`
 - Producer (Simulator):
   - Sends JSON messages representing device measurements (deviceId, timestamp, energy kWh)
-- Consumer (Monitoring Service):
-  - Listens on `device.data.queue`
-  - Converts incoming measurements into hourly aggregates stored in `monitoring_db`
+  - Supports multiple device IDs per simulation run
+- Consumer (Load Balancer Service):
+  - Routes measurements to instance-specific queues based on device ID hash
+
+### Load Balancer Routing
+
+- Algorithm: `Math.abs(deviceId.hashCode()) % 3`
+- Output Queues:
+  - `monitoring.ingestion.queue.1` → monitoring-service-1
+  - `monitoring.ingestion.queue.2` → monitoring-service-2  
+  - `monitoring.ingestion.queue.3` → monitoring-service-3
+
+### Monitoring Aggregation
+
+Each monitoring replica:
+1. Consumes from its dedicated queue
+2. Looks up device in local `monitored_devices` table (synced from Device Management)
+3. If device exists, aggregates measurement into hourly energy buckets
+4. If hourly consumption exceeds device's `maxConsumption`, sends overconsumption notification
+
+### Overconsumption Notifications
+
+When a device exceeds its hourly consumption limit:
+1. Monitoring Service sends notification to `notif.overconsumption.queue`
+2. WebSocket Service consumes the notification
+3. Frontend filters notifications to show only those for the current user (based on `ownerUsername`)
+
+**Notification Payload**:
+```json
+{
+  "deviceId": "uuid",
+  "hourStart": "2025-12-17T10:00:00Z",
+  "currentConsumption": 2.5,
+  "maxAllowed": 2.0,
+  "ownerUsername": "john_doe",
+  "message": "Device exceeded hourly consumption limit..."
+}
+```
 
 ### Monitoring API for Historical Consumption
 
@@ -581,8 +721,25 @@ Now you can test all endpoints that require authentication across all three serv
 - id (UUID, PRIMARY KEY)
 - description (VARCHAR)
 - address (VARCHAR)
-- max_hourly_consumption (FLOAT)
+- max_consumption (FLOAT) - hourly consumption threshold
 - owner_username (VARCHAR)
+```
+
+### Monitoring Service Database (Shared by 3 Replicas)
+
+**Table: `monitored_devices`**
+```
+- device_id (VARCHAR, PRIMARY KEY)
+- max_consumption (FLOAT) - synced from Device Service
+- owner_username (VARCHAR) - synced from Device Service
+```
+
+**Table: `hourly_energy`**
+```
+- id (BIGINT, PRIMARY KEY)
+- device_id (VARCHAR)
+- hour_start (TIMESTAMP) - start of the hour bucket
+- total_energy (FLOAT) - aggregated kWh for the hour
 ```
 
 ## 🔄 API Request Flow Example

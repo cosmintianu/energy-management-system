@@ -1,0 +1,8 @@
+fastapi>=0.95
+uvicorn[standard]>=0.22
+# pin aio-pika to a compatible release available on PyPI
+aio-pika>=9.5.8
+httpx>=0.24
+python-dotenv>=1.0
+google-auth>=2.20
+google-auth-httplib2>=0.1

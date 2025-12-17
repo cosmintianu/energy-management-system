@@ -2,8 +2,10 @@ package org.example.device_management_microservice.dtos;
 
 public class SyncEvent {
     private String type; // "DEVICE"
-    private String event; // "CREATED"
+    private String event; // "CREATED", "UPDATED", "DELETED"
     private String id;
+    private Double maxConsumption; // Max hourly consumption threshold in kWh
+    private String ownerUsername; // Username of the device owner
 
     public SyncEvent() {}
 
@@ -13,11 +15,23 @@ public class SyncEvent {
         this.id = id;
     }
 
+    public SyncEvent(String type, String event, String id, Double maxConsumption, String ownerUsername) {
+        this.type = type;
+        this.event = event;
+        this.id = id;
+        this.maxConsumption = maxConsumption;
+        this.ownerUsername = ownerUsername;
+    }
+
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }
     public String getEvent() { return event; }
     public void setEvent(String event) { this.event = event; }
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
+    public Double getMaxConsumption() { return maxConsumption; }
+    public void setMaxConsumption(Double maxConsumption) { this.maxConsumption = maxConsumption; }
+    public String getOwnerUsername() { return ownerUsername; }
+    public void setOwnerUsername(String ownerUsername) { this.ownerUsername = ownerUsername; }
 }
 

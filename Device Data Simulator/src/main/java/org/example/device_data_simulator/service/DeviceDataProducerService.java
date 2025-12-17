@@ -12,8 +12,11 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 
 
@@ -28,8 +31,8 @@ public class DeviceDataProducerService {
     @Value("${simulator.queue}")
     private String queueName;
 
-    @Value("${simulator.device-id}")
-    private UUID deviceId;
+    @Value("${simulator.device-ids}")
+    private String deviceIdsString;
 
     @Value("${simulator.readings-count}")
     private int readingsCount;
@@ -46,22 +49,30 @@ public class DeviceDataProducerService {
     }
 
     public void runOnce() {
+        List<UUID> deviceIds = Arrays.stream(deviceIdsString.split(","))
+                .map(String::trim)
+                .map(UUID::fromString)
+                .collect(Collectors.toList());
+
         Instant now = Instant.now();
         ZoneId zoneId = ZoneId.of(timezone);
 
-        for (int i = readingsCount - 1; i >= 0; i--) {
-            Instant endTime = now.minusSeconds((long) i * intervalMinutes * 60L);
-            double energy = generateEnergyForInterval(endTime, zoneId);
+        for (UUID deviceId : deviceIds) {
+            LOGGER.info("Generating data for device: {}", deviceId);
+            for (int i = readingsCount - 1; i >= 0; i--) {
+                Instant endTime = now.minusSeconds((long) i * intervalMinutes * 60L);
+                double energy = generateEnergyForInterval(endTime, zoneId);
 
-            DeviceMeasurement measurement =
-                    new DeviceMeasurement(deviceId, endTime, energy);
+                DeviceMeasurement measurement =
+                        new DeviceMeasurement(deviceId, endTime, energy);
 
-            try {
-                String json = objectMapper.writeValueAsString(measurement);
-                rabbitTemplate.convertAndSend(queueName, json);
-                LOGGER.info("Sent measurement JSON: {}", json);
-            } catch (Exception e) {
-                LOGGER.error("Failed to serialize measurement", e);
+                try {
+                    String json = objectMapper.writeValueAsString(measurement);
+                    rabbitTemplate.convertAndSend(queueName, json);
+                    LOGGER.info("Sent measurement JSON: {}", json);
+                } catch (Exception e) {
+                    LOGGER.error("Failed to serialize measurement", e);
+                }
             }
         }
     }

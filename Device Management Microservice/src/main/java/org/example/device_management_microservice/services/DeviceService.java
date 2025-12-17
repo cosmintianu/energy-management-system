@@ -49,8 +49,8 @@ public class DeviceService {
         device = deviceRepository.save(device);
         LOGGER.debug("Device with id {} was inserted in db", device.getId());
 
-        // Publish sync event
-        deviceSyncPublisher.publishDeviceCreated(device.getId().toString());
+        // Publish sync event with maxConsumption and ownerUsername
+        deviceSyncPublisher.publishDeviceCreated(device.getId().toString(), device.getMaxConsumption(), device.getOwner().getUsername());
 
         return device.getId();
     }
@@ -105,6 +105,9 @@ public class DeviceService {
 
         existingDevice = deviceRepository.save(existingDevice);
         LOGGER.debug("Device with id {} was updated in db", id);
+
+        // Publish sync event with updated maxConsumption and ownerUsername
+        deviceSyncPublisher.publishDeviceUpdated(id.toString(), existingDevice.getMaxConsumption(), existingDevice.getOwner().getUsername());
 
         return DeviceBuilder.toDeviceDetailsDTO(existingDevice);
     }

@@ -58,11 +58,7 @@ public class LoadBalancerService {
         }
     }
 
-    /**
-     * Selects a queue based on the hash of the deviceId.
-     * This provides consistent routing - same device always goes to same replica.
-     * Simple but effective algorithm that avoids round-robin.
-     */
+
     private String selectQueue(UUID deviceId) {
         // Use absolute value of hash and modulo to get consistent queue assignment
         int hash = Math.abs(deviceId.hashCode());

@@ -6,6 +6,8 @@ function Notifications() {
   const wsRef = useRef(null);
 
   useEffect(() => {
+    const currentUsername = localStorage.getItem('username');
+    
     const base = import.meta.env.VITE_WEBSOCKET_URL || '';
     const url = base || `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:8000/ws/notifications`;
     const ws = new WebSocket(url);
@@ -15,7 +17,12 @@ function Notifications() {
     ws.onmessage = (ev) => {
       try {
         const data = JSON.parse(ev.data);
-        setItems((s) => [data, ...s].slice(0, 50));
+        // Only show notifications for the current user
+        const notifOwner = data.payload?.ownerUsername;
+        console.log('Notification received:', data, 'Owner:', notifOwner, 'Current user:', currentUsername);
+        if (!notifOwner || notifOwner === currentUsername) {
+          setItems((s) => [data, ...s].slice(0, 50));
+        }
       } catch (e) {
         setItems((s) => [{ payload: ev.data, timestamp: Date.now() }, ...s].slice(0,50));
       }

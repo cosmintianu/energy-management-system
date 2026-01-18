@@ -1,8 +1,17 @@
 import axios from 'axios';
 
-// Use environment variable or default to localhost
+// Use environment variable, or current hostname for production
+const getBaseURL = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  // In production, use the same host but port 80 (Traefik)
+  const host = window.location.hostname;
+  return `http://${host}`;
+};
+
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost',
+  baseURL: getBaseURL(),
 });
 
 // Add token to requests

@@ -12,8 +12,7 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the app with production API URL
-ENV VITE_API_URL=http://localhost
+# Build the app (API URL is determined dynamically at runtime)
 RUN npm run build
 
 # Production stage

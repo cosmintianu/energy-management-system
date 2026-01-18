@@ -140,6 +140,17 @@ test:auth-service:
   stage: test
   image: maven:3.9-eclipse-temurin-21
   <<: *maven-cache
+  services:
+    - postgres:16
+  variables:
+    POSTGRES_DB: test_db
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+    DB_IP: postgres
+    DB_PORT: 5432
+    DB_DBNAME: test_db
+    DB_USER: postgres
+    DB_PASSWORD: postgres
   needs:
     - build:auth-service
   script:
@@ -158,6 +169,17 @@ test:user-service:
   stage: test
   image: maven:3.9-eclipse-temurin-21
   <<: *maven-cache
+  services:
+    - postgres:16
+  variables:
+    POSTGRES_DB: test_db
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+    DB_IP: postgres
+    DB_PORT: 5432
+    DB_DBNAME: test_db
+    DB_USER: postgres
+    DB_PASSWORD: postgres
   needs:
     - build:user-service
   script:
@@ -176,6 +198,17 @@ test:device-service:
   stage: test
   image: maven:3.9-eclipse-temurin-21
   <<: *maven-cache
+  services:
+    - postgres:16
+  variables:
+    POSTGRES_DB: test_db
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+    DB_IP: postgres
+    DB_PORT: 5432
+    DB_DBNAME: test_db
+    DB_USER: postgres
+    DB_PASSWORD: postgres
   needs:
     - build:device-service
   script:
@@ -194,6 +227,17 @@ test:monitoring-service:
   stage: test
   image: maven:3.9-eclipse-temurin-21
   <<: *maven-cache
+  services:
+    - postgres:16
+  variables:
+    POSTGRES_DB: test_db
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+    DB_IP: postgres
+    DB_PORT: 5432
+    DB_DBNAME: test_db
+    DB_USER: postgres
+    DB_PASSWORD: postgres
   needs:
     - build:monitoring-service
   script:
@@ -212,6 +256,17 @@ test:device-simulator:
   stage: test
   image: maven:3.9-eclipse-temurin-21
   <<: *maven-cache
+  services:
+    - postgres:16
+  variables:
+    POSTGRES_DB: test_db
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+    DB_IP: postgres
+    DB_PORT: 5432
+    DB_DBNAME: test_db
+    DB_USER: postgres
+    DB_PASSWORD: postgres
   needs:
     - build:device-simulator
   script:

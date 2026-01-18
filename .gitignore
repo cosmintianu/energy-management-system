@@ -36,3 +36,4 @@ build/
 .env
 
 ssh-aws.txt
+EC2*

@@ -1,0 +1,358 @@
+# GitLab CI/CD Pipeline for Energy Management System
+# This pipeline builds, tests, and deploys all microservices to AWS
+#
+# Required GitLab CI/CD Variables (Settings > CI/CD > Variables):
+# ---------------------------------------------------------------
+# AWS_SSH_PRIVATE_KEY   - Your EC2 .pem key file contents (type: File)
+# AWS_SSH_KNOWN_HOSTS   - Run: ssh-keyscan <EC2_IP> (type: Variable)
+# AWS_HOST              - Your EC2 public IP or hostname
+# AWS_USER              - SSH user (ec2-user for Amazon Linux, ubuntu for Ubuntu)
+# AWS_APP_DIR           - App directory on EC2 (e.g., /home/ec2-user/app)
+
+stages:
+  - build
+  - test
+  - docker
+  - deploy
+
+# Global variables
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+
+# Cache Maven dependencies across jobs
+.maven-cache: &maven-cache
+  cache:
+    key: maven-${CI_COMMIT_REF_SLUG}
+    paths:
+      - .m2/repository/
+
+# Cache Node.js dependencies
+.node-cache: &node-cache
+  cache:
+    key: node-${CI_COMMIT_REF_SLUG}
+    paths:
+      - Frontend/node_modules/
+
+# ===========================================
+# BUILD STAGE
+# ===========================================
+
+# Build Auth Microservice
+build:auth-service:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  <<: *maven-cache
+  script:
+    - cd "Auth Microservice"
+    - mvn clean compile -DskipTests
+  artifacts:
+    paths:
+      - "Auth Microservice/target/"
+    expire_in: 1 hour
+
+# Build User Management Microservice
+build:user-service:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  <<: *maven-cache
+  script:
+    - cd "User Management Microservice"
+    - mvn clean compile -DskipTests
+  artifacts:
+    paths:
+      - "User Management Microservice/target/"
+    expire_in: 1 hour
+
+# Build Device Management Microservice
+build:device-service:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  <<: *maven-cache
+  script:
+    - cd "Device Management Microservice"
+    - mvn clean compile -DskipTests
+  artifacts:
+    paths:
+      - "Device Management Microservice/target/"
+    expire_in: 1 hour
+
+# Build Monitoring Microservice
+build:monitoring-service:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  <<: *maven-cache
+  script:
+    - cd "Monitoring Microservice"
+    - mvn clean compile -DskipTests
+  artifacts:
+    paths:
+      - "Monitoring Microservice/target/"
+    expire_in: 1 hour
+
+# Build Device Data Simulator
+build:device-simulator:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  <<: *maven-cache
+  script:
+    - cd "Device Data Simulator"
+    - mvn clean compile -DskipTests
+  artifacts:
+    paths:
+      - "Device Data Simulator/target/"
+    expire_in: 1 hour
+
+# Build Frontend
+build:frontend:
+  stage: build
+  image: node:20-alpine
+  <<: *node-cache
+  script:
+    - cd Frontend
+    - npm ci
+    - npm run build
+  artifacts:
+    paths:
+      - Frontend/dist/
+    expire_in: 1 hour
+
+# Check Python dependencies (Websocket Service)
+build:websocket-service:
+  stage: build
+  image: python:3.11-slim
+  script:
+    - cd "Websocket and Support Service"
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+  cache:
+    key: python-${CI_COMMIT_REF_SLUG}
+    paths:
+      - .pip-cache/
+
+# ===========================================
+# TEST STAGE
+# ===========================================
+
+# Test Auth Microservice
+test:auth-service:
+  stage: test
+  image: maven:3.9-eclipse-temurin-21
+  <<: *maven-cache
+  needs:
+    - build:auth-service
+  script:
+    - cd "Auth Microservice"
+    - mvn test
+  artifacts:
+    when: always
+    reports:
+      junit: "Auth Microservice/target/surefire-reports/*.xml"
+    paths:
+      - "Auth Microservice/target/surefire-reports/"
+    expire_in: 1 week
+
+# Test User Management Microservice
+test:user-service:
+  stage: test
+  image: maven:3.9-eclipse-temurin-21
+  <<: *maven-cache
+  needs:
+    - build:user-service
+  script:
+    - cd "User Management Microservice"
+    - mvn test
+  artifacts:
+    when: always
+    reports:
+      junit: "User Management Microservice/target/surefire-reports/*.xml"
+    paths:
+      - "User Management Microservice/target/surefire-reports/"
+    expire_in: 1 week
+
+# Test Device Management Microservice
+test:device-service:
+  stage: test
+  image: maven:3.9-eclipse-temurin-21
+  <<: *maven-cache
+  needs:
+    - build:device-service
+  script:
+    - cd "Device Management Microservice"
+    - mvn test
+  artifacts:
+    when: always
+    reports:
+      junit: "Device Management Microservice/target/surefire-reports/*.xml"
+    paths:
+      - "Device Management Microservice/target/surefire-reports/"
+    expire_in: 1 week
+
+# Test Monitoring Microservice
+test:monitoring-service:
+  stage: test
+  image: maven:3.9-eclipse-temurin-21
+  <<: *maven-cache
+  needs:
+    - build:monitoring-service
+  script:
+    - cd "Monitoring Microservice"
+    - mvn test
+  artifacts:
+    when: always
+    reports:
+      junit: "Monitoring Microservice/target/surefire-reports/*.xml"
+    paths:
+      - "Monitoring Microservice/target/surefire-reports/"
+    expire_in: 1 week
+
+# Test Device Data Simulator
+test:device-simulator:
+  stage: test
+  image: maven:3.9-eclipse-temurin-21
+  <<: *maven-cache
+  needs:
+    - build:device-simulator
+  script:
+    - cd "Device Data Simulator"
+    - mvn test
+  artifacts:
+    when: always
+    reports:
+      junit: "Device Data Simulator/target/surefire-reports/*.xml"
+    paths:
+      - "Device Data Simulator/target/surefire-reports/"
+    expire_in: 1 week
+
+# Validate Python syntax (Websocket Service)
+test:websocket-service:
+  stage: test
+  image: python:3.11-slim
+  needs:
+    - build:websocket-service
+  script:
+    - cd "Websocket and Support Service"
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+    - python -m py_compile main.py gemini_client.py
+
+# ===========================================
+# DOCKER BUILD STAGE
+# ===========================================
+
+# Build Docker images (only on main/master branch)
+.docker-build-template: &docker-build
+  stage: docker
+  image: docker:24
+  services:
+    - docker:24-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"
+      when: on_success
+    - when: never
+
+docker:auth-service:
+  <<: *docker-build
+  needs:
+    - test:auth-service
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE/auth-service:$CI_COMMIT_SHA -t $CI_REGISTRY_IMAGE/auth-service:latest "./Auth Microservice"
+    - docker push $CI_REGISTRY_IMAGE/auth-service:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE/auth-service:latest
+
+docker:user-service:
+  <<: *docker-build
+  needs:
+    - test:user-service
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE/user-service:$CI_COMMIT_SHA -t $CI_REGISTRY_IMAGE/user-service:latest "./User Management Microservice"
+    - docker push $CI_REGISTRY_IMAGE/user-service:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE/user-service:latest
+
+docker:device-service:
+  <<: *docker-build
+  needs:
+    - test:device-service
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE/device-service:$CI_COMMIT_SHA -t $CI_REGISTRY_IMAGE/device-service:latest "./Device Management Microservice"
+    - docker push $CI_REGISTRY_IMAGE/device-service:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE/device-service:latest
+
+docker:monitoring-service:
+  <<: *docker-build
+  needs:
+    - test:monitoring-service
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE/monitoring-service:$CI_COMMIT_SHA -t $CI_REGISTRY_IMAGE/monitoring-service:latest "./Monitoring Microservice"
+    - docker push $CI_REGISTRY_IMAGE/monitoring-service:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE/monitoring-service:latest
+
+docker:device-simulator:
+  <<: *docker-build
+  needs:
+    - test:device-simulator
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE/device-simulator:$CI_COMMIT_SHA -t $CI_REGISTRY_IMAGE/device-simulator:latest "./Device Data Simulator"
+    - docker push $CI_REGISTRY_IMAGE/device-simulator:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE/device-simulator:latest
+
+docker:frontend:
+  <<: *docker-build
+  needs:
+    - build:frontend
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA -t $CI_REGISTRY_IMAGE/frontend:latest ./Frontend
+    - docker push $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE/frontend:latest
+
+docker:websocket-service:
+  <<: *docker-build
+  needs:
+    - test:websocket-service
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE/websocket-service:$CI_COMMIT_SHA -t $CI_REGISTRY_IMAGE/websocket-service:latest "./Websocket and Support Service"
+    - docker push $CI_REGISTRY_IMAGE/websocket-service:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE/websocket-service:latest
+
+# ===========================================
+# DEPLOY STAGE - AWS EC2
+# ===========================================
+
+# Deploy to AWS EC2
+deploy:aws:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$AWS_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -H $AWS_HOST >> ~/.ssh/known_hosts
+  script:
+    - echo "Deploying to AWS EC2..."
+    - ssh $AWS_USER@$AWS_HOST "
+        cd $AWS_APP_DIR &&
+        docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
+        docker-compose pull &&
+        docker-compose down &&
+        docker-compose up -d &&
+        docker image prune -f
+      "
+  environment:
+    name: production
+    url: http://$AWS_HOST
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"
+      when: manual
+  needs:
+    - docker:auth-service
+    - docker:user-service
+    - docker:device-service
+    - docker:monitoring-service
+    - docker:device-simulator
+    - docker:frontend
+    - docker:websocket-service

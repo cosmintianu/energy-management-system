@@ -382,6 +382,7 @@ deploy:aws:
     - ssh-keyscan -H $AWS_HOST >> ~/.ssh/known_hosts 2>/dev/null || true
   script:
     - echo "Deploying to AWS EC2 at $AWS_HOST..."
+    - scp -o StrictHostKeyChecking=no docker-compose.prod.yml $AWS_USER@$AWS_HOST:$AWS_APP_DIR/docker-compose.yml
     - |
       ssh -o StrictHostKeyChecking=no $AWS_USER@$AWS_HOST "
         cd $AWS_APP_DIR &&

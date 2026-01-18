@@ -1,0 +1,300 @@
+# Production Docker Compose - Uses pre-built images from GitLab Registry
+# Replace REGISTRY_URL with your GitLab registry path
+
+services:
+  # Frontend (React Vite build served by Nginx)
+  frontend:
+    image: ${CI_REGISTRY_IMAGE:-registry.gitlab.com/ds2025_30441_tianu_cosmin/ds2025_30441_tianu_cosmin_assignment_3}/frontend:latest
+    container_name: ems-frontend
+    ports:
+      - "3000:80"
+    networks:
+      - microservices-network
+    depends_on:
+      - traefik
+    restart: unless-stopped
+
+  # Traefik Reverse Proxy
+  traefik:
+    image: traefik:v3.6
+    command:
+      - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8081:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - microservices-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.middlewares.api-cors.headers.accesscontrolalloworiginlist=*"
+      - "traefik.http.middlewares.api-cors.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS"
+      - "traefik.http.middlewares.api-cors.headers.accesscontrolallowheaders=Content-Type,Authorization"
+      - "traefik.http.middlewares.api-cors.headers.accesscontrolallowcredentials=true"
+      - "traefik.http.middlewares.api-cors.headers.accesscontrolmaxage=3600"
+
+  # Auth Service
+  auth-service:
+    image: ${CI_REGISTRY_IMAGE:-registry.gitlab.com/ds2025_30441_tianu_cosmin/ds2025_30441_tianu_cosmin_assignment_3}/auth-service:latest
+    container_name: auth-service
+    environment:
+      - DB_IP=auth-db
+      - DB_PORT=5432
+      - DB_DBNAME=auth_microservice_db
+      - DB_USER=postgres
+      - DB_PASSWORD=cox
+      - JWT_SECRET=d9cf114c-d9ae-4620-a62e-b5872bd61385
+      - JWT_EXPIRATION=900000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auth-service.rule=PathPrefix(`/auth`)"
+      - "traefik.http.services.auth-service.loadbalancer.server.port=8080"
+      - "traefik.http.routers.auth-service.entrypoints=web"
+      - "traefik.http.routers.auth-service.middlewares=api-cors"
+    networks:
+      - microservices-network
+    depends_on:
+      - auth-db
+    restart: on-failure
+
+  auth-db:
+    image: postgres:16
+    container_name: auth-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: cox
+      POSTGRES_DB: auth_microservice_db
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # User Management Service
+  user-service:
+    image: ${CI_REGISTRY_IMAGE:-registry.gitlab.com/ds2025_30441_tianu_cosmin/ds2025_30441_tianu_cosmin_assignment_3}/user-service:latest
+    container_name: user-service
+    environment:
+      - DB_IP=user-db
+      - DB_PORT=5432
+      - DB_DBNAME=user_management_microservice_db
+      - DB_USER=postgres
+      - DB_PASSWORD=cox
+      - JWT_SECRET=d9cf114c-d9ae-4620-a62e-b5872bd61385
+      - JWT_EXPIRATION=900000
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.user-service.rule=PathPrefix(`/users`)"
+      - "traefik.http.services.user-service.loadbalancer.server.port=8080"
+      - "traefik.http.routers.user-service.entrypoints=web"
+      - "traefik.http.routers.user-service.middlewares=api-cors"
+    networks:
+      - microservices-network
+    depends_on:
+      - user-db
+    restart: on-failure
+
+  user-db:
+    image: postgres:16
+    container_name: user-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: cox
+      POSTGRES_DB: user_management_microservice_db
+    volumes:
+      - user-db-data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Device Management Service
+  device-service:
+    image: ${CI_REGISTRY_IMAGE:-registry.gitlab.com/ds2025_30441_tianu_cosmin/ds2025_30441_tianu_cosmin_assignment_3}/device-service:latest
+    container_name: device-service
+    environment:
+      - DB_IP=device-db
+      - DB_PORT=5432
+      - DB_DBNAME=device_management_microservice_db
+      - DB_USER=postgres
+      - DB_PASSWORD=cox
+      - JWT_SECRET=d9cf114c-d9ae-4620-a62e-b5872bd61385
+      - JWT_EXPIRATION=900000
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.device-service.rule=PathPrefix(`/devices`)"
+      - "traefik.http.services.device-service.loadbalancer.server.port=8080"
+      - "traefik.http.routers.device-service.entrypoints=web"
+      - "traefik.http.routers.device-service.middlewares=api-cors"
+    networks:
+      - microservices-network
+    depends_on:
+      - device-db
+    restart: on-failure
+
+  device-db:
+    image: postgres:16
+    container_name: device-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: cox
+      POSTGRES_DB: device_management_microservice_db
+    volumes:
+      - device-db-data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  monitoring-db:
+    image: postgres:16
+    container_name: monitoring-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: cox
+      POSTGRES_DB: monitoring_microservice_db
+    volumes:
+      - monitoring-db-data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  monitoring-service-1:
+    image: ${CI_REGISTRY_IMAGE:-registry.gitlab.com/ds2025_30441_tianu_cosmin/ds2025_30441_tianu_cosmin_assignment_3}/monitoring-service:latest
+    container_name: monitoring-service-1
+    environment:
+      - DB_IP=monitoring-db
+      - DB_PORT=5432
+      - DB_DBNAME=monitoring_microservice_db
+      - DB_USER=postgres
+      - DB_PASSWORD=cox
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - MONITORING_QUEUE=monitoring.ingestion.queue.1
+      - INSTANCE_ID=1
+    depends_on:
+      - monitoring-db
+      - rabbitmq
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.monitoring-service.rule=PathPrefix(`/monitoring`)"
+      - "traefik.http.services.monitoring-service.loadbalancer.server.port=8080"
+      - "traefik.http.routers.monitoring-service.entrypoints=web"
+      - "traefik.http.routers.monitoring-service.middlewares=api-cors"
+
+  monitoring-service-2:
+    image: ${CI_REGISTRY_IMAGE:-registry.gitlab.com/ds2025_30441_tianu_cosmin/ds2025_30441_tianu_cosmin_assignment_3}/monitoring-service:latest
+    container_name: monitoring-service-2
+    environment:
+      - DB_IP=monitoring-db
+      - DB_PORT=5432
+      - DB_DBNAME=monitoring_microservice_db
+      - DB_USER=postgres
+      - DB_PASSWORD=cox
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - MONITORING_QUEUE=monitoring.ingestion.queue.2
+      - INSTANCE_ID=2
+    depends_on:
+      - monitoring-db
+      - rabbitmq
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  monitoring-service-3:
+    image: ${CI_REGISTRY_IMAGE:-registry.gitlab.com/ds2025_30441_tianu_cosmin/ds2025_30441_tianu_cosmin_assignment_3}/monitoring-service:latest
+    container_name: monitoring-service-3
+    environment:
+      - DB_IP=monitoring-db
+      - DB_PORT=5432
+      - DB_DBNAME=monitoring_microservice_db
+      - DB_USER=postgres
+      - DB_PASSWORD=cox
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - MONITORING_QUEUE=monitoring.ingestion.queue.3
+      - INSTANCE_ID=3
+    depends_on:
+      - monitoring-db
+      - rabbitmq
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  device-data-simulator:
+    image: ${CI_REGISTRY_IMAGE:-registry.gitlab.com/ds2025_30441_tianu_cosmin/ds2025_30441_tianu_cosmin_assignment_3}/device-simulator:latest
+    container_name: device-data-simulator
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+    depends_on:
+      - rabbitmq
+    networks:
+      - microservices-network
+    restart: "no"
+
+  websocket-and-support-service:
+    image: ${CI_REGISTRY_IMAGE:-registry.gitlab.com/ds2025_30441_tianu_cosmin/ds2025_30441_tianu_cosmin_assignment_3}/websocket-service:latest
+    container_name: websocket-service
+    environment:
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - RABBITMQ_QUEUE=notif.overconsumption.queue
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-models/gemini-2.5-flash-lite}
+    ports:
+      - "8000:8000"
+    networks:
+      - microservices-network
+    depends_on:
+      - rabbitmq
+    restart: unless-stopped
+
+volumes:
+  user-db-data:
+  device-db-data:
+  auth-db-data:
+  monitoring-db-data:
+
+networks:
+  microservices-network:
+    driver: bridge

@@ -211,6 +211,7 @@ services:
     depends_on:
       - monitoring-db
       - rabbitmq
+      - load-balancer-service
     networks:
       - microservices-network
     restart: unless-stopped
@@ -237,6 +238,7 @@ services:
     depends_on:
       - monitoring-db
       - rabbitmq
+      - load-balancer-service
     networks:
       - microservices-network
     restart: unless-stopped
@@ -257,6 +259,7 @@ services:
     depends_on:
       - monitoring-db
       - rabbitmq
+      - load-balancer-service
     networks:
       - microservices-network
     restart: unless-stopped
@@ -269,9 +272,22 @@ services:
       - RABBITMQ_PORT=5672
     depends_on:
       - rabbitmq
+      - load-balancer-service
     networks:
       - microservices-network
     restart: "no"
+
+  load-balancer-service:
+    image: ${CI_REGISTRY_IMAGE:-registry.gitlab.com/ds2025_30441_tianu_cosmin/ds2025_30441_tianu_cosmin_assignment_3}/load-balancer-service:latest
+    container_name: load-balancer-service
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+    depends_on:
+      - rabbitmq
+    networks:
+      - microservices-network
+    restart: unless-stopped
 
   websocket-and-support-service:
     image: ${CI_REGISTRY_IMAGE:-registry.gitlab.com/ds2025_30441_tianu_cosmin/ds2025_30441_tianu_cosmin_assignment_3}/websocket-service:latest

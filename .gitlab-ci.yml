@@ -104,6 +104,19 @@ build:device-simulator:
       - "Device Data Simulator/target/"
     expire_in: 1 hour
 
+# Build Load Balancer Service
+build:load-balancer-service:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  <<: *maven-cache
+  script:
+    - cd "Load Balancer Service"
+    - mvn clean compile -DskipTests
+  artifacts:
+    paths:
+      - "Load Balancer Service/target/"
+    expire_in: 1 hour
+
 # Build Frontend
 build:frontend:
   stage: build
@@ -346,6 +359,15 @@ docker:device-simulator:
     - docker push $CI_REGISTRY_IMAGE/device-simulator:$CI_COMMIT_SHA
     - docker push $CI_REGISTRY_IMAGE/device-simulator:latest
 
+docker:load-balancer-service:
+  <<: *docker-build
+  needs:
+    - build:load-balancer-service
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE/load-balancer-service:$CI_COMMIT_SHA -t $CI_REGISTRY_IMAGE/load-balancer-service:latest "./Load Balancer Service"
+    - docker push $CI_REGISTRY_IMAGE/load-balancer-service:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE/load-balancer-service:latest
+
 docker:frontend:
   <<: *docker-build
   needs:
@@ -403,6 +425,7 @@ deploy:aws:
     - docker:user-service
     - docker:device-service
     - docker:monitoring-service
+    - docker:load-balancer-service
     - docker:device-simulator
     - docker:frontend
     - docker:websocket-service

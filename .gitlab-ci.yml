@@ -408,6 +408,7 @@ deploy:aws:
     - |
       ssh -o StrictHostKeyChecking=no $AWS_USER@$AWS_HOST "
         cd $AWS_APP_DIR &&
+        export GEMINI_API_KEY='$GEMINI_API_KEY' &&
         docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
         docker-compose pull &&
         docker-compose down &&

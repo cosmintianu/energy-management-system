@@ -1,7 +1,6 @@
 # GitLab CI/CD Pipeline for Energy Management System
 # This pipeline builds, tests, and deploys all microservices to AWS
 #
-# Required GitLab CI/CD Variables (Settings > CI/CD > Variables):
 # ---------------------------------------------------------------
 # AWS_SSH_PRIVATE_KEY   - Your EC2 .pem key file contents (type: File)
 # AWS_SSH_KNOWN_HOSTS   - Run: ssh-keyscan <EC2_IP> (type: Variable)
@@ -273,7 +272,7 @@ test:monitoring-service:
       - "Monitoring Microservice/target/surefire-reports/"
     expire_in: 1 week
 
-# Device Data Simulator - Skip tests (it's a runner, not a testable service)
+# Device Data Simulator
 test:device-simulator:
   stage: test
   image: maven:3.9-eclipse-temurin-21

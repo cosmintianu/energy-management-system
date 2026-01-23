@@ -1,772 +1,438 @@
-# Energy Management System 
+# Energy Management System
 
-A complete, event‑driven microservices application built with Spring Boot, React, PostgreSQL, RabbitMQ, and Traefik. The system is structured around independent services for authentication, user management, device management, and energy monitoring, all exposed behind a single API gateway.
+A distributed, event-driven microservices platform for managing IoT energy devices, monitoring real-time consumption, and providing intelligent support through AI-powered chat. Built with Spring Boot, React, PostgreSQL, RabbitMQ, and Traefik.
 
-The backend is split into three core domain services (Auth, User Management, Device Management) plus a Monitoring service and a Device Data Simulator. Each service owns its own PostgreSQL database and communicates over HTTP (via Traefik) or asynchronously through RabbitMQ. User and device data are synchronized between services using a topic‑based event bus, ensuring loose coupling and eventual consistency.
+---
 
-The React frontend (served by Nginx in its own container) talks only to Traefik on port 80 and provides:
-- Registration and login with JWT‑based authentication and role‑based access control (ADMIN / CLIENT).
-- User and device management screens tailored to the current user’s role.
-- Energy monitoring views where users (and admins) can inspect per‑device historical consumption as daily line or bar charts, powered by aggregated measurements stored by the Monitoring service.
+## Table of Contents
 
-## 🏗️ Docker Architecture Overview
-![Alt text](/Deployment%20Diagram.png "Title")
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [Services](#services)
+- [Event-Driven Communication](#event-driven-communication)
+- [Authentication](#authentication)
+- [Monitoring Pipeline](#monitoring-pipeline)
+- [Deployment](#deployment)
+- [Database Schemas](#database-schemas)
 
-**Key Points:**
-- Frontend runs in Docker container on port 3000 (Nginx serving React build)
-- Frontend makes API calls to Traefik on port 80
-- Traefik routes backend requests to appropriate microservices
-- All containers communicate via Docker network
-- Frontend is NOT behind Traefik (accessed directly)
+---
 
-## 📁 Project Structure
+## Overview
+
+The Energy Management System enables users to register IoT energy devices, monitor their consumption in real-time, and receive automated alerts when devices exceed configured thresholds. The platform is built on a microservices architecture with the following key capabilities:
+
+- **User Authentication** — JWT-based authentication with role-based access control (Admin/Client)
+- **Device Management** — Full CRUD operations for IoT devices with ownership tracking
+- **Real-time Monitoring** — Live energy consumption tracking with hourly aggregation
+- **Smart Alerts** — Automatic overconsumption notifications delivered via WebSocket
+- **AI Support** — Integrated Google Gemini-powered support assistant
+- **Analytics** — Historical consumption charts with daily breakdowns
+
+---
+
+## Architecture
+
+![Deployment Diagram](./Deployment%20Diagram.png)
+
+### Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| Separate databases per service | Data isolation and independent scaling |
+| Topic-based sync exchange | Services subscribe only to relevant events |
+| Hash-based load balancing | Consistent device-to-replica routing for aggregation |
+| Shared monitoring database | All replicas need atomic hourly aggregation |
+| WebSocket for notifications | Real-time push without polling overhead |
+
+---
+
+## Tech Stack
+
+### Backend
+
+| Component | Technology |
+|-----------|------------|
+| Framework | Spring Boot 3.4.0 |
+| Language | Java 21 |
+| Security | Spring Security + JWT |
+| Database | PostgreSQL 16 |
+| ORM | Hibernate / JPA |
+| API Docs | Springdoc OpenAPI 2.7.0 |
+| Messaging | RabbitMQ 3.x |
+
+### Frontend
+
+| Component | Technology |
+|-----------|------------|
+| Framework | React 18.2 |
+| Build Tool | Vite 7.2 |
+| HTTP Client | Axios 1.6 |
+| Routing | React Router 6.20 |
+| Charts | Recharts 3.5 |
+| Server | Nginx |
+
+### WebSocket & AI Service
+
+| Component | Technology |
+|-----------|------------|
+| Framework | FastAPI |
+| Async Messaging | aio-pika |
+| AI Integration | Google Gemini 2.5 Flash |
+
+### Infrastructure
+
+| Component | Technology |
+|-----------|------------|
+| API Gateway | Traefik 3.6 |
+| Containers | Docker + Docker Compose |
+| CI/CD | GitLab CI |
+| Cloud | AWS EC2 |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Docker 20.10+
+- Docker Compose 2.0+
+- Git
+
+### Quick Start
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd <project-directory>
+
+# Build and start all services
+docker-compose up -d --build
+
+# Verify all containers are running (wait ~60 seconds)
+docker-compose ps
 ```
-.
-├── Auth Microservice/                      # Authentication & Authorization Service
-│   ├── src/main/java/com/example/auth_service/
-│   │   ├── controllers/                   # REST API endpoints
-│   │   ├── entities/                      # JPA entities
-│   │   ├── repositories/                  # Database repositories
-│   │   ├── services/                      # Business logic
-│   │   ├── filters/                       # JWT authentication filter
-│   │   ├── config/                        # Security, Swagger, RabbitMQ config
-│   │   └── dtos/                          # Data Transfer Objects
-│   ├── src/main/resources/
-│   │   └── application.properties
-│   ├── Dockerfile
-│   └── pom.xml
-│
-├── User Management Microservice/           # User Profile Management Service
-│   ├── src/main/java/org/example/user_management_microservice/
-│   │   ├── controllers/
-│   │   ├── entities/
-│   │   ├── repositories/
-│   │   ├── services/                      # Includes UserEventPublisher (user sync producer)
-│   │   ├── filters/
-│   │   ├── config/                        # Includes SyncRabbitConfig (topic exchange for sync)
-│   │   └── dtos/
-│   ├── src/main/resources/
-│   │   └── application.properties
-│   ├── Dockerfile
-│   └── pom.xml
-│
-├── Device Management Microservice/         # IoT Device Management Service
-│   ├── src/main/java/org/example/device_management_microservice/
-│   │   ├── controllers/
-│   │   ├── entities/                      # Device, User (local copy for sync)
-│   │   ├── repositories/
-│   │   ├── services/                      # DeviceService, DeviceSyncPublisher, SyncEventListener
-│   │   ├── filters/
-│   │   ├── config/                        # Security, Swagger, SyncRabbitConfig (topic exchange)
-│   │   └── dtos/
-│   ├── src/main/resources/
-│   │   └── application.properties
-│   ├── Dockerfile
-│   └── pom.xml
-│
-├── Monitoring Microservice/                # Energy Monitoring & Aggregation Service
-│   ├── src/main/java/org/example/monitoring/
-│   │   ├── controllers/                   # MonitoringController (/monitoring/device/{id}/daily)
-│   │   ├── entities/                      # HourlyEnergy, MonitoredDevice
-│   │   ├── repositories/                  # HourlyEnergyRepository, MonitoredDeviceRepository
-│   │   ├── services/                      # MonitoringService, MonitoringQueryService, DeviceSyncConsumer
-│   │   ├── config/                        # SyncRabbitConfig (topic exchange), Rabbit/DB config
-│   │   └── dtos/                          # HourlyEnergyDTO
-│   ├── src/main/resources/
-│   │   └── application.properties
-│   ├── Dockerfile
-│   └── pom.xml
-│
-├── Device Data Simulator/                  # Synthetic IoT data generator
-│   ├── src/main/java/org/example/device_simulator/
-│   │   ├── services/                      # SimulatorService (sends to device.data.queue)
-│   │   ├── config/                        # RabbitMQ config (queue name only)
-│   │   └── models/                        # DeviceMeasurement, etc.
-│   ├── src/main/resources/
-│   │   └── application.properties
-│   ├── Dockerfile
-│   └── pom.xml
-│
-├── Front/                                  # React Frontend
-│   ├── public/
-│   ├── src/
-│   │   ├── components/                     # React components
-│   │   │   ├── Login.jsx
-│   │   │   ├── Register.jsx               # Registration flow (auth + user profile)
-│   │   │   ├── Dashboard.jsx
-│   │   │   ├── Users.jsx
-│   │   │   ├── Devices.jsx                # Device list + "View Consumption" button
-│   │   │   ├── DeviceConsumption.jsx      # Daily energy charts per device
-│   │   │   ├── Profile.jsx
-│   │   │   └── Navbar.jsx
-│   │   ├── api/
-│   │   │   └── axios.js                   # API configuration (baseURL: http://localhost)
-│   │   ├── App.jsx                        # Routing (includes /devices/:deviceId/consumption)
-│   │   └── App.css
-│   ├── Dockerfile                         # Multi-stage build (build + nginx)
-│   ├── nginx.conf                         # Nginx configuration
-│   └── package.json
-│
-├── docker-compose.yml                      # All services (including RabbitMQ, Monitoring, Simulator)
-└── README.md                               # Project documentation
+
+### Access Points
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:3000 |
+| Traefik Dashboard | http://localhost:8081 |
+| RabbitMQ Management | http://localhost:15672 |
+| Auth API Docs | http://localhost/auth/swagger-ui.html |
+| User API Docs | http://localhost/users/swagger-ui.html |
+| Device API Docs | http://localhost/devices/swagger-ui.html |
+
+---
+
+## Services
+
+### Auth Service
+
+Handles user credentials, JWT generation, and role management.
+
+**Base Path:** `/auth`
+
+| Endpoint | Method | Auth Required | Description |
+|----------|--------|---------------|-------------|
+| `/register` | POST | No | Create new account |
+| `/login` | POST | No | Authenticate, receive JWT |
+| `/users` | GET | Admin | List all users |
+| `/users/{username}/role` | PUT | Admin | Update user role |
+| `/users/{username}` | DELETE | Admin | Delete user |
+
+### User Service
+
+Manages user profiles separate from authentication credentials.
+
+**Base Path:** `/users`
+
+| Endpoint | Method | Auth Required | Description |
+|----------|--------|---------------|-------------|
+| `/` | POST | Yes | Create profile |
+| `/` | GET | Yes | List all profiles |
+| `/{id}` | GET | Yes | Get profile by ID |
+| `/{id}` | PUT | Yes | Update profile |
+| `/{id}` | DELETE | Admin | Delete profile |
+
+### Device Service
+
+CRUD operations for IoT energy devices with ownership tracking.
+
+**Base Path:** `/devices`
+
+| Endpoint | Method | Auth Required | Description |
+|----------|--------|---------------|-------------|
+| `/` | POST | Yes | Register device |
+| `/` | GET | Yes | List devices (filtered by role) |
+| `/{id}` | GET | Yes | Get device details |
+| `/{id}` | PUT | Yes | Update device |
+| `/{id}` | DELETE | Yes | Remove device |
+
+### Monitoring Service
+
+Aggregates energy data and exposes historical consumption.
+
+**Base Path:** `/monitoring`
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/device/{id}/daily?date=YYYY-MM-DD` | GET | Get 24-hour consumption |
+
+**Response Format:**
+```json
+[
+  { "hour": 0, "totalEnergy": 0.15 },
+  { "hour": 1, "totalEnergy": 0.10 },
+  ...
+  { "hour": 23, "totalEnergy": 0.25 }
+]
 ```
 
-## 🚀 Services Overview
+### WebSocket Service
 
-### 1. **Authentication Service** (`/auth`)
-- **Container**: `auth-service`
-- **Port**: 8080 (internal)
-- **Database**: `auth_microservice_db`
-- **Responsibilities**:
-  - User registration and login
-  - JWT token generation and validation
-  - Role management (ADMIN, CLIENT)
-  - User role promotion/demotion
+Real-time notifications and AI-powered support chat.
 
-**Endpoints**:
-- `POST /auth/register` - Register new user
-- `POST /auth/login` - User login (returns JWT)
-- `GET /auth/users` - Get all users (Admin only)
-- `PUT /auth/users/{username}/role` - Update user role (Admin only)
-- `DELETE /auth/users/{username}` - Delete user (Admin only)
+**Base URL:** `ws://localhost:8000`
 
-**Swagger**: http://localhost/auth/swagger-ui.html
+| Room | Path | Purpose |
+|------|------|---------|
+| Notifications | `/ws/notifications` | Overconsumption alerts |
+| Chat | `/ws/chat` | User messaging |
+| Support | `/ws/support` | AI assistant |
 
-### 2. **User Management Service** (`/users`)
-- **Container**: `user-service`
-- **Port**: 8080 (internal)
-- **Database**: `user_management_microservice_db`
-- **Responsibilities**:
-  - User profile management
-  - User details (email, address)
-  - Profile updates
+---
 
-**Endpoints**:
-- `POST /users` - Create user profile
-- `GET /users` - Get all users
-- `GET /users/{id}` - Get user by ID
-- `PUT /users/{id}` - Update user profile
-- `DELETE /users/{id}` - Delete user (Admin only)
+## Event-Driven Communication
 
-**Swagger**: http://localhost/users/swagger-ui.html
+### RabbitMQ Topology
 
-### 3. **Device Management Service** (`/devices`)
-- **Container**: `device-service`
-- **Port**: 8080 (internal)
-- **Database**: `device_management_microservice_db`
-- **Responsibilities**:
-  - IoT device management
-  - Device ownership tracking
-  - Device CRUD operations
-
-**Endpoints**:
-- `POST /devices` - Create device
-- `GET /devices` - Get all devices (Admin sees all, Client sees own)
-- `GET /devices/{id}` - Get device by ID
-- `PUT /devices/{id}` - Update device
-- `DELETE /devices/{id}` - Delete device
-
-**Swagger**: http://localhost/devices/swagger-ui.html
-
-### 4. **React Frontend**
-- **Container**: `ems-frontend`
-- **Port**: 3000 (exposed)
-- **Technology**: React 18 + Nginx
-- **API Base URL**: http://localhost (Traefik)
-- **Features**:
-  - User authentication (login/register)
-  - Dashboard
-  - User management (Admin only)
-  - Device management
-  - Profile management
-  - Role-based access control
-
-### 5. Monitoring Service (`/monitoring`)
-- **Container**: `monitoring-service`
-- **Port**: 8080 (internal)
-- **Database**: `monitoring_db`
-- **Responsibilities**:
-  - Consume raw device measurements from RabbitMQ
-  - Aggregate energy data into hourly buckets per device
-  - Expose historical consumption per device and day
-
-**Endpoints**:
-- `GET /monitoring/device/{deviceId}/daily?date=YYYY-MM-DD`  
-  Returns 24 entries (hours 0–23) with total energy in kWh for each hour.
-
-
-### 6. Device Data Simulator
-- **Container**: `device-data-simulator`
-- **Responsibilities**:
-  - Generate realistic device energy measurements for multiple devices
-  - Send JSON messages to the simulator data queue in RabbitMQ
-- **Notes**:
-  - Supports multiple device IDs (comma-separated in config)
-  - Sends to `simulator.data.queue` which is consumed by the Load Balancer
-  - Used for demo/testing, not exposed via HTTP
-
-**Configuration** (application.properties):
-- `simulator.device-ids` - Comma-separated list of device UUIDs to simulate
-- `simulator.readings-count` - Number of readings to generate per device
-- `simulator.interval-minutes` - Logical time interval between readings
-
-### 7. Load Balancer Service
-- **Container**: `load-balancer-service`
-- **Port**: 8080 (internal)
-- **Responsibilities**:
-  - Consume device measurements from the simulator queue
-  - Distribute measurements to monitoring replicas using hash-based routing
-  - Ensure consistent device-to-replica mapping
-
-**Architecture**:
-- Input Queue: `simulator.data.queue`
-- Output Queues: `monitoring.ingestion.queue.1`, `monitoring.ingestion.queue.2`, `monitoring.ingestion.queue.3`
-- Algorithm: Hash-based routing (`deviceId.hashCode() % replicaCount`)
-
-**Why hash-based routing?**
-- Ensures all measurements from the same device always go to the same monitoring replica
-- Maintains data locality for per-device aggregations
-- Simple and deterministic (not round-robin)
-
-### 8. Monitoring Service (3 Replicas)
-- **Containers**: `monitoring-service-1`, `monitoring-service-2`, `monitoring-service-3`
-- **Port**: 8080 (internal, load-balanced via Traefik)
-- **Database**: `monitoring_db` (shared by all replicas)
-- **Responsibilities**:
-  - Consume device measurements from instance-specific ingestion queues
-  - Aggregate energy data into hourly buckets per device
-  - Detect overconsumption and send notifications
-  - Expose historical consumption per device and day
-
-**Instance Configuration**:
-Each replica has:
-- `MONITORING_QUEUE` - Instance-specific queue (e.g., `monitoring.ingestion.queue.1`)
-- `INSTANCE_ID` - Unique identifier for logging (e.g., `monitoring-1`)
-
-**Overconsumption Detection**:
-- Each device has a `maxConsumption` threshold (synced from Device Management)
-- When hourly consumption exceeds the threshold, a notification is sent
-- Notifications include: deviceId, hourStart, currentConsumption, maxAllowed, ownerUsername
-
-**Endpoints**:
-- `GET /monitoring/device/{deviceId}/daily?date=YYYY-MM-DD`  
-  Returns 24 entries (hours 0–23) with total energy in kWh for each hour.
-
-### 9. WebSocket & Support Service
-- **Container**: `websocket-service`
-- **Port**: 8000 (exposed)
-- **Technology**: Python FastAPI + aio-pika
-- **Responsibilities**:
-  - Real-time WebSocket connections for chat and notifications
-  - Consume overconsumption notifications from RabbitMQ
-  - Broadcast notifications to connected frontend clients
-  - AI-powered support chat (Gemini integration)
-
-**WebSocket Rooms**:
-- `/ws/notifications` - Overconsumption alerts
-- `/ws/chat` - Global chat room
-- `/ws/support` - AI support chat
-
-**RabbitMQ Integration**:
-- Queue: `notif.overconsumption.queue`
-- Broadcasts received messages to all clients in the notifications room
-
-
-## 🔄 Event-Driven Synchronization
-
-The system uses RabbitMQ and a topic exchange to synchronize devices and users between services.
-
-### Exchanges, Queues, and Routing Keys
-
-- **Exchange (Topic)**: `sync.events.exchange`
-
-**Publishers and routing keys**:
-- User Management Service:
-  - Publishes user events
-  - Routing key: `sync.user.created`
-- Device Management Service:
-  - Publishes device events
-  - Routing key: `sync.device.created`
-
-**Queues per service**:
-- Device Management Service:
-  - Queue: `sync.device-service.queue`
-  - Binding: `sync.#` (receives all sync events)
-- Monitoring Service:
-  - Queue: `sync.monitoring-service.queue`
-  - Binding: `sync.device.created` (receives only device events)
-
-This avoids multiple consumers competing on the same queue and ensures each service gets the right events.
+```
+                      sync.events.exchange (topic)
+                                 │
+            ┌────────────────────┼────────────────────┐
+            │                    │                    │
+    sync.user.*    sync.device.*           (bindings)
+            │                    │
+            ▼                    ▼
+   sync.device-svc.queue   sync.monitoring-svc.queue
+            │                    │
+            ▼                    ▼
+     Device Service        Monitoring Service
+```
 
 ### User Sync Flow
 
-Goal: keep a minimal copy of users in the Device Management DB (only username).
-
-**Flow**:
-1. Frontend:
-   - Calls `/auth/register` (Auth Service creates credentials).
-   - Calls `/auth/login` and gets JWT.
-   - Calls `/users` (User Management Service creates user profile).
-
-2. User Management Service:
-   - After creating the profile, publishes a `USER.CREATED` event to `sync.events.exchange` with routing key `users`.
-   - Event payload (simplified):  
-     `{ "type": "USER", "event": "CREATED", "id": "<username>" }`
-
-3. Device Management Service:
-   - Listens on `sync.device-service.queue`.
-   - For `USER.CREATED` events, checks if the username exists; if not, creates a `User` entity with that username.
-   - Result: Device Service has a local `users` table to link devices to owners.
-
-Frontend change:
-- The manual call to `/devices/sync/users` in `Register.jsx` is no longer needed; sync is fully event-driven.
+1. User Management Service creates a profile
+2. Publishes `USER.CREATED` event with username
+3. Device Service receives event and creates local user record
+4. Devices can now be linked to owners
 
 ### Device Sync Flow
 
-Goal: duplicate device IDs, maxConsumption thresholds, and owner information into the Monitoring DB to validate measurements, aggregate per device, and send targeted overconsumption notifications.
+1. Device Service creates/updates/deletes a device
+2. Publishes `DEVICE.CREATED|UPDATED|DELETED` event
+3. Monitoring Service receives and updates its local device table
+4. Enables overconsumption threshold checking per device
 
-**Flow**:
-1. Device Management Service:
-   - After creating a device, publishes a `DEVICE.CREATED` event to `sync.events.exchange` with routing key `devices`.
-   - After updating a device, publishes a `DEVICE.UPDATED` event.
-   - After deleting a device, publishes a `DEVICE.DELETED` event.
-   - Event payload:  
-     ```json
-     { 
-       "type": "DEVICE", 
-       "event": "CREATED|UPDATED|DELETED", 
-       "id": "<device-uuid>",
-       "maxConsumption": 2.5,
-       "ownerUsername": "john_doe"
-     }
-     ```
+---
 
-2. Monitoring Service:
-   - Listens on `sync.monitoring-service.queue`.
-   - For `DEVICE.CREATED` events, inserts the device with its maxConsumption and ownerUsername.
-   - For `DEVICE.UPDATED` events, updates the maxConsumption and ownerUsername.
-   - For `DEVICE.DELETED` events, removes the device from the local table.
+## Authentication
 
-3. When a new measurement arrives from the simulator:
-   - Monitoring Service first checks if the device ID exists in the local `monitored_devices` table.
-   - If not, it skips the measurement (device not registered).
-   - If yes, it aggregates into hourly energy records and checks for overconsumption using the device's `maxConsumption` threshold.
+### JWT Flow
 
-4. Overconsumption notifications include `ownerUsername` so the frontend can filter notifications per user.
+1. User calls `POST /auth/login` with credentials
+2. Auth Service validates and returns JWT (15-minute TTL)
+3. Frontend stores token in `localStorage`
+4. All subsequent API calls include `Authorization: Bearer <token>`
+5. Each microservice validates the JWT independently
 
+### Roles
 
-## 📡 Device Data & Monitoring
+| Role | Capabilities |
+|------|-------------|
+| **Admin** | Full access to all resources and users |
+| **Client** | Own profile and devices only |
 
-### Data Flow Architecture
+---
+
+## Monitoring Pipeline
+
+### Data Flow
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────────┐
-│  Device Data    │────▶│  Load Balancer  │────▶│  Monitoring Replica │
-│   Simulator     │     │    Service      │     │     1, 2, or 3      │
-└─────────────────┘     └─────────────────┘     └─────────────────────┘
-        │                       │                         │
-        ▼                       ▼                         ▼
-simulator.data.queue    Hash-based routing      monitoring.ingestion.queue.N
-                        (deviceId % 3)                    │
-                                                          ▼
-                                                  ┌───────────────┐
-                                                  │ monitoring_db │
-                                                  │   (shared)    │
-                                                  └───────────────┘
-                                                          │
-                                                          ▼ (if overconsumption)
-                                              ┌─────────────────────────┐
-                                              │ notif.overconsumption   │
-                                              │        .queue           │
-                                              └─────────────────────────┘
-                                                          │
-                                                          ▼
-                                              ┌─────────────────────────┐
-                                              │  WebSocket Service      │
-                                              │  (broadcasts to users)  │
-                                              └─────────────────────────┘
+Device Simulator
+       │
+       ▼
+simulator.data.queue
+       │
+       ▼
+Load Balancer Service ─── hash(deviceId) % 3
+       │
+       ├─── monitoring.ingestion.queue.1 ─── Monitoring Replica 1
+       ├─── monitoring.ingestion.queue.2 ─── Monitoring Replica 2
+       └─── monitoring.ingestion.queue.3 ─── Monitoring Replica 3
+                                                      │
+                                                      ▼
+                                              monitoring_db (shared)
+                                                      │
+                                            (if threshold exceeded)
+                                                      ▼
+                                         notif.overconsumption.queue
+                                                      │
+                                                      ▼
+                                            WebSocket Service
+                                                      │
+                                                      ▼
+                                            Connected Clients
 ```
 
-### Device Data Queue
+### Overconsumption Notification Payload
 
-- Input Queue: `simulator.data.queue`
-- Producer (Simulator):
-  - Sends JSON messages representing device measurements (deviceId, timestamp, energy kWh)
-  - Supports multiple device IDs per simulation run
-- Consumer (Load Balancer Service):
-  - Routes measurements to instance-specific queues based on device ID hash
-
-### Load Balancer Routing
-
-- Algorithm: `Math.abs(deviceId.hashCode()) % 3`
-- Output Queues:
-  - `monitoring.ingestion.queue.1` → monitoring-service-1
-  - `monitoring.ingestion.queue.2` → monitoring-service-2  
-  - `monitoring.ingestion.queue.3` → monitoring-service-3
-
-### Monitoring Aggregation
-
-Each monitoring replica:
-1. Consumes from its dedicated queue
-2. Looks up device in local `monitored_devices` table (synced from Device Management)
-3. If device exists, aggregates measurement into hourly energy buckets
-4. If hourly consumption exceeds device's `maxConsumption`, sends overconsumption notification
-
-### Overconsumption Notifications
-
-When a device exceeds its hourly consumption limit:
-1. Monitoring Service sends notification to `notif.overconsumption.queue`
-2. WebSocket Service consumes the notification
-3. Frontend filters notifications to show only those for the current user (based on `ownerUsername`)
-
-**Notification Payload**:
 ```json
 {
-  "deviceId": "uuid",
-  "hourStart": "2025-12-17T10:00:00Z",
+  "deviceId": "550e8400-e29b-41d4-a716-446655440000",
+  "hourStart": "2025-01-23T14:00:00Z",
   "currentConsumption": 2.5,
   "maxAllowed": 2.0,
   "ownerUsername": "john_doe",
-  "message": "Device exceeded hourly consumption limit..."
+  "message": "Device exceeded hourly consumption limit"
 }
 ```
 
-### Monitoring API for Historical Consumption
+---
 
-- Endpoint: `GET /monitoring/device/{deviceId}/daily?date=YYYY-MM-DD`
-- Returns: list of objects with:
-  - `hour` (0–23)
-  - `totalEnergy` (kWh for that hour)
+## Deployment
 
-Used by the frontend to render charts (line/bar) of daily energy consumption.
+### Local Development
 
-**Example response**:
-
-```json
-[
-{ "hour": 0, "totalEnergy": 0.15 },
-{ "hour": 1, "totalEnergy": 0.10 },
-...
-{ "hour": 23, "totalEnergy": 0.25 }
-]
-
+```bash
+docker-compose up -d --build
 ```
 
-## 💻 Frontend: Energy Consumption Charts
+### Production
 
-The React frontend allows viewing per-device historical energy:
+The `docker-compose.prod.yml` uses pre-built images from GitLab Container Registry:
 
-- On the Devices page:
-  - Each device card has a “View Consumption” button.
-  - This opens `/devices/:deviceId/consumption`.
-
-- DeviceConsumption page:
-  - Lets the user:
-    - Pick a day from a date picker.
-    - Toggle between line and bar chart.
-  - Fetches data via:
-    - `GET /monitoring/device/{deviceId}/daily?date=YYYY-MM-DD`
-  - Displays:
-    - 24-hour chart (OX = hours, OY = energy [kWh])
-    - Total daily consumption
-    - Peak hour
-    - Average per hour
-
-Role behavior:
-- **ADMIN** can view consumption for any device.
-- **CLIENT** sees only devices they own and their corresponding charts.
-
-## 🔐 Authentication & Authorization
-
-### JWT Token
-- All protected endpoints require JWT Bearer token
-- Token expiration: 15 minutes (900000ms)
-- Token contains: username, role
-
-### User Roles
-- **ADMIN**: Full access to all resources
-- **CLIENT**: Limited access (own profile and devices only)
-
-### Authentication Flow
-1. User registers via `/auth/register`
-2. User logs in via `/auth/login` → receives JWT token
-3. Frontend stores token in `localStorage`
-4. Frontend includes token in `Authorization: Bearer <token>` header
-5. Each microservice validates JWT independently
-
-## 🛠️ Technology Stack
-
-### Backend
-- **Framework**: Spring Boot 3.4.0
-- **Language**: Java 17+
-- **Security**: Spring Security + JWT
-- **Database**: PostgreSQL 15
-- **ORM**: Hibernate/JPA
-- **API Documentation**: Springdoc OpenAPI (Swagger) 2.7.0
-- **Validation**: Jakarta Validation
-
-### Frontend
-- **Framework**: React 18
-- **HTTP Client**: Axios
-- **Router**: React Router DOM
-- **Styling**: Custom CSS
-- **Web Server**: Nginx (in Docker)
-
-### Infrastructure
-- **Reverse Proxy**: Traefik 2.10
-- **Containerization**: Docker & Docker Compose
-- **API Gateway**: Traefik on Port 80
-- **Network**: Docker Bridge Network
-
-## 📋 Prerequisites
-
-- Docker (20.10+)
-- Docker Compose (2.0+)
-- Git
-
-## ⚙️ Setup Instructions
-
-### 1. Clone the Repository
-
-```
-git clone <repository-url>
-cd <project-directory>
+```bash
+docker login registry.gitlab.com
+docker-compose -f docker-compose.prod.yml pull
+docker-compose -f docker-compose.prod.yml up -d
 ```
 
-### 2. Configure Environment Variables
+### Environment Variables
 
-The `docker-compose.yml` already contains default configuration. For production, update these variables:
+| Variable | Description |
+|----------|-------------|
+| `JWT_SECRET` | Shared secret for JWT signing |
+| `JWT_EXPIRATION` | Token TTL in milliseconds (default: 900000) |
+| `DB_PASSWORD` | PostgreSQL password |
+| `RABBITMQ_HOST` | Message broker hostname |
+| `GEMINI_API_KEY` | Google Gemini API key (optional) |
 
-```
-# In docker-compose.yml, update JWT_SECRET for all services
-JWT_SECRET=your-secret-key-at-least-256-bits-long-here-change-in-production
-```
+### CI/CD Pipeline
 
-### 3. Build and Start All Services
+The GitLab CI pipeline includes four stages:
 
-```
-# Build all services (backend + frontend)
-docker-compose build
+1. **Build** — Compile all services (Maven/npm)
+2. **Test** — Run unit tests with PostgreSQL/RabbitMQ containers
+3. **Docker** — Build and push images to GitLab Registry
+4. **Deploy** — SSH to AWS EC2, pull images, restart containers (manual trigger)
 
-# Start all services
-docker-compose up -d
+---
 
-# Check service status
-docker-compose ps
+## Database Schemas
 
-# View logs
-docker-compose logs -f
-```
+### Auth Service
 
-### 4. Verify Services
-
-Wait 30-60 seconds for all services to start, then check:
-
-```
-# Check if all containers are running
-docker-compose ps
-
-# Expected output: All services should show "Up" status
+```sql
+CREATE TABLE auth_user (
+    id          UUID PRIMARY KEY,
+    username    VARCHAR(255) UNIQUE NOT NULL,
+    password    VARCHAR(255) NOT NULL,
+    role        VARCHAR(50) NOT NULL
+);
 ```
 
-### 5. Access the Application
+### User Service
 
-- **Frontend**: http://localhost:3000
-- **Auth Service Swagger**: http://localhost/auth/swagger-ui.html
-- **User Service Swagger**: http://localhost/users/swagger-ui.html
-- **Device Service Swagger**: http://localhost/devices/swagger-ui.html
-
-
-## 🎯 Usage Guide
-
-### 1. Register a New User
-
-1. Go to http://localhost:3000
-2. Click "Register"
-3. Enter username and password
-4. Click "Register" button
-
-### 2. Login
-
-1. Enter credentials on login page
-2. Click "Login"
-3. You'll be redirected to Dashboard
-
-### 3. Manage Users (Admin Only)
-
-1. Navigate to "Users" from navbar
-2. View all users
-3. Edit user profiles
-4. Promote/Demote users between CLIENT and ADMIN roles
-5. Delete users
-
-### 4. Manage Devices
-
-1. Navigate to "Devices" from navbar
-2. Click "Add Device" to create new device
-3. Edit or delete existing devices
-4. **CLIENT** users see only their devices
-5. **ADMIN** users see all devices
-
-### 5. Update Profile
-
-1. Navigate to "Profile" from navbar
-2. Click "Edit Profile"
-3. Update email and address
-4. Click "Save"
-
-## 🔧 Docker Commands
-
-### Start All Services
-```
-docker-compose up -d
+```sql
+CREATE TABLE users (
+    id          UUID PRIMARY KEY,
+    username    VARCHAR(255) UNIQUE NOT NULL,
+    email       VARCHAR(255),
+    address     VARCHAR(255)
+);
 ```
 
-### Stop All Services
-```
-docker-compose down
+### Device Service
+
+```sql
+CREATE TABLE device (
+    id              UUID PRIMARY KEY,
+    description     VARCHAR(255),
+    address         VARCHAR(255),
+    max_consumption FLOAT,
+    owner_username  VARCHAR(255)
+);
 ```
 
-### Rebuild a Specific Service
-```
-# Backend service
-docker-compose build --no-cache auth-service
-docker-compose up -d auth-service
+### Monitoring Service
 
-# Frontend
-docker-compose build --no-cache frontend
-docker-compose up -d frontend
+```sql
+CREATE TABLE monitored_devices (
+    device_id       VARCHAR(255) PRIMARY KEY,
+    max_consumption FLOAT,
+    owner_username  VARCHAR(255)
+);
+
+CREATE TABLE hourly_energy (
+    id              BIGSERIAL PRIMARY KEY,
+    device_id       VARCHAR(255) NOT NULL,
+    hour_start      TIMESTAMP NOT NULL,
+    total_energy    FLOAT NOT NULL
+);
 ```
 
-### View Logs
-```
-# All services
-docker-compose logs -f
+---
 
-# Specific service
+## Useful Commands
+
+```bash
+# View logs for a specific service
 docker-compose logs -f auth-service
-docker-compose logs -f frontend
-```
 
-### Clean Up Everything
-```
-# Stop and remove containers, networks
+# Restart a single service
+docker-compose restart device-service
+
+# Stop and remove all containers
 docker-compose down
 
-# Remove volumes (⚠️ deletes all data)
+# Reset everything including data
 docker-compose down -v
 ```
 
-## 🧪 Testing with Swagger
+---
 
-### 1. Access Swagger UI
-
-All Swagger UIs are accessible through Traefik:
-- **Auth Service**: http://localhost/auth/swagger-ui.html
-- **User Service**: http://localhost/users/swagger-ui.html
-- **Device Service**: http://localhost/devices/swagger-ui.html
-
-### 2. Get JWT Token
-
-1. Go to Auth Service Swagger: http://localhost/auth/swagger-ui.html
-2. Find the `/auth/login` endpoint
-3. Click "Try it out"
-4. Enter credentials:
-   ```
-   {
-     "username": "your-username",
-     "password": "your-password"
-   }
-   ```
-5. Click "Execute"
-6. Copy the `token` from the response
-
-### 3. Authorize in Swagger
-
-1. Click the "Authorize" button (🔒 icon) at the top right
-2. Enter: `Bearer <your-token>` (replace `<your-token>` with actual token)
-3. Click "Authorize"
-4. Click "Close"
-
-### 4. Test Protected Endpoints
-
-Now you can test all endpoints that require authentication across all three services!
-
-## 📊 Database Schemas
-
-### Auth Service Database
-
-**Table: `auth_user`**
-```
-- id (UUID, PRIMARY KEY)
-- username (VARCHAR, UNIQUE)
-- password (VARCHAR, hashed with BCrypt)
-- role (VARCHAR: ADMIN or CLIENT)
-```
-
-### User Service Database
-
-**Table: `users`**
-```
-- id (UUID, PRIMARY KEY)
-- username (VARCHAR, UNIQUE)
-- email (VARCHAR)
-- address (VARCHAR)
-```
-
-### Device Service Database
-
-**Table: `device`**
-```
-- id (UUID, PRIMARY KEY)
-- description (VARCHAR)
-- address (VARCHAR)
-- max_consumption (FLOAT) - hourly consumption threshold
-- owner_username (VARCHAR)
-```
-
-### Monitoring Service Database (Shared by 3 Replicas)
-
-**Table: `monitored_devices`**
-```
-- device_id (VARCHAR, PRIMARY KEY)
-- max_consumption (FLOAT) - synced from Device Service
-- owner_username (VARCHAR) - synced from Device Service
-```
-
-**Table: `hourly_energy`**
-```
-- id (BIGINT, PRIMARY KEY)
-- device_id (VARCHAR)
-- hour_start (TIMESTAMP) - start of the hour bucket
-- total_energy (FLOAT) - aggregated kWh for the hour
-```
-
-## 🔄 API Request Flow Example
-
-### Example: Client Creates a Device
+## Project Structure
 
 ```
-1. Frontend (localhost:3000): 
-   User clicks "Add Device" button
-   
-2. Frontend makes request: POST http://localhost/devices
-   Headers: { Authorization: Bearer <jwt-token> }
-   Body: { description: "Smart Light", address: "Living Room", ... }
-   
-3. Request goes to Traefik (localhost:80)
-   
-4. Traefik routes to: device-service:8080/devices
-   
-5. Device Service:
-   - JWT Filter validates token
-   - Extracts username and role from token
-   - SecurityConfig checks @PreAuthorize permissions
-   - Controller sets ownerUsername to current user (CLIENT)
-   - DeviceService saves to database
-   
-6. Response: 201 Created → Traefik → Frontend
-   
-7. Frontend displays success message
+.
+├── Auth Microservice/           # JWT authentication
+├── User Management Microservice/# User profiles
+├── Device Management Microservice/# IoT devices
+├── Monitoring Microservice/     # Energy aggregation
+├── Load Balancer Service/       # Hash-based routing
+├── Device Data Simulator/       # Test data generator
+├── Websocket and Support Service/# Notifications + AI chat
+├── Frontend/                    # React SPA
+├── docker-compose.yml           # Local development
+├── docker-compose.prod.yml      # Production
+└── .gitlab-ci.yml               # CI/CD pipeline
 ```
 
+---
+
+*Developed as part of the Distributed Systems course at Technical University of Cluj-Napoca.*
